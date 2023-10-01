@@ -5,11 +5,15 @@ import (
 )
 
 type ServiceContext struct {
-	Config config.Config
+	Config       config.Config
+	OtherSideUid map[int64]bool
+	TopUid       map[int64]bool
 }
 
 func NewServiceContext(c config.Config) *ServiceContext {
 	return &ServiceContext{
-		Config: c,
+		OtherSideUid: make(map[int64]bool),
+		TopUid:       make(map[int64]bool),
+		Config:       c,
 	}
 }

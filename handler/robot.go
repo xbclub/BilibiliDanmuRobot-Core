@@ -11,7 +11,7 @@ import (
 )
 
 // 欢迎弹幕处理
-func (w *wsHandler) welcomedanmu() {
+func (w *wsHandler) robot() {
 	w.client.OnDanmaku(func(danmaku *message.Danmaku) {
 		// @帮助 打出来关键词
 		if strings.Compare("@帮助", danmaku.Content) == 0 {
