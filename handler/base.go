@@ -6,6 +6,7 @@ import (
 	_ "github.com/Akegarasu/blivedm-go/utils"
 	"github.com/xbclub/BilibiliDanmuRobot-Core/entity"
 	"github.com/xbclub/BilibiliDanmuRobot-Core/http"
+	"github.com/xbclub/BilibiliDanmuRobot-Core/logic"
 	"github.com/xbclub/BilibiliDanmuRobot-Core/svc"
 	"github.com/xbclub/BilibiliDanmuRobot-Core/utiles"
 	"github.com/zeromicro/go-zero/core/logx"
@@ -38,6 +39,7 @@ type WsHandler interface {
 }
 
 func (w *wsHandler) StartWsClient() error {
+	w.startLogic()
 	w.welcomedanmu()
 	return w.client.Start()
 }
@@ -46,7 +48,12 @@ func (w *wsHandler) StopWsClient() {
 }
 func (w *wsHandler) startLogic() {
 	w.sendBulletCtx, w.sendBulletCancel = context.WithCancel(context.Background())
+	go logic.StartSendBullet(w.sendBulletCtx, w.svc)
+	logx.Info("弹幕推送已开启...")
+
 	w.robotBulletCtx, w.robotBulletCancel = context.WithCancel(context.Background())
+	go logic.StartBulletRobot(w.robotBulletCtx, w.svc)
+	logx.Info("弹幕机器人已开启")
 }
 func (w *wsHandler) starthttp() {
 	var err error
