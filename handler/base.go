@@ -2,14 +2,18 @@ package handler
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"github.com/Akegarasu/blivedm-go/client"
 	_ "github.com/Akegarasu/blivedm-go/utils"
 	"github.com/robfig/cron/v3"
+	"github.com/xbclub/BilibiliDanmuRobot-Core/config"
 	"github.com/xbclub/BilibiliDanmuRobot-Core/entity"
 	"github.com/xbclub/BilibiliDanmuRobot-Core/http"
 	"github.com/xbclub/BilibiliDanmuRobot-Core/logic"
 	"github.com/xbclub/BilibiliDanmuRobot-Core/svc"
 	"github.com/xbclub/BilibiliDanmuRobot-Core/utiles"
+	"github.com/zeromicro/go-zero/core/conf"
 	"github.com/zeromicro/go-zero/core/logx"
 	"math/rand"
 	"os"
@@ -38,12 +42,28 @@ type wsHandler struct {
 	mapCronDanmuSendIdx map[int]int
 }
 
-func NewWsHandler(svc *svc.ServiceContext) WsHandler {
+func NewWsHandler() WsHandler {
+	dir := "./token"
+	if _, err := os.Stat(dir); os.IsNotExist(err) {
+		// Directory does not exist, create it
+		err = os.Mkdir(dir, 0755)
+		if err != nil {
+			panic(fmt.Sprintf("无法创建token文件夹 请手动创建:%s", err))
+		}
+	}
+	var c config.Config
+	conf.MustLoad("etc/bilidanmaku-api.yaml", &c, conf.UseEnv())
+	logx.MustSetup(c.Log)
+	logx.DisableStat()
+	ctx := svc.NewServiceContext(c)
 	ws := new(wsHandler)
-	ws.starthttp()
-	ws.client = client.NewClient(svc.Config.RoomId)
+	err := ws.starthttp()
+	if err != nil {
+		return nil
+	}
+	ws.client = client.NewClient(ctx.Config.RoomId)
 	ws.client.SetCookie(http.CookieStr)
-	ws.svc = svc
+	ws.svc = ctx
 	//初始化定时弹幕
 	ws.corndanmu = cron.New(cron.WithParser(cron.NewParser(
 		cron.SecondOptional | cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.Dow,
@@ -55,7 +75,7 @@ func NewWsHandler(svc *svc.ServiceContext) WsHandler {
 type WsHandler interface {
 	StartWsClient() error
 	StopWsClient()
-	starthttp()
+	starthttp() error
 }
 
 func (w *wsHandler) StartWsClient() error {
@@ -120,7 +140,7 @@ func (w *wsHandler) startLogic() {
 	w.corndanmuStart()
 
 }
-func (w *wsHandler) starthttp() {
+func (w *wsHandler) starthttp() error {
 	var err error
 	http.InitHttpClient()
 	// 判断是否存在历史cookie
@@ -128,7 +148,7 @@ func (w *wsHandler) starthttp() {
 		err = http.SetHistoryCookie()
 		if err != nil {
 			logx.Error("用户登录失败")
-			os.Exit(1)
+			return err
 		}
 		logx.Info("用户登录成功")
 	} else {
@@ -138,8 +158,9 @@ func (w *wsHandler) starthttp() {
 		//}
 		//logx.Info("用户登录成功")
 		logx.Error("用户登录失败")
-		os.Exit(1)
+		return errors.New("用户登录失败")
 	}
+	return nil
 }
 func (w *wsHandler) userlogin() error {
 	var err error
