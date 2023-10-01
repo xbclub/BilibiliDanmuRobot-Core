@@ -6,6 +6,7 @@ require (
 	github.com/Akegarasu/blivedm-go v1.5.0
 	github.com/avast/retry-go/v4 v4.5.0
 	github.com/go-resty/resty/v2 v2.9.1
+	github.com/robfig/cron/v3 v3.0.1
 	github.com/sashabaranov/go-openai v1.15.3
 	github.com/skip2/go-qrcode v0.0.0-20200617195104-da1b6568686e
 	github.com/zeromicro/go-zero v1.5.6
@@ -20,7 +21,6 @@ require (
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-isatty v0.0.17 // indirect
 	github.com/pelletier/go-toml/v2 v2.1.0 // indirect
-	github.com/robfig/cron/v3 v3.0.1 // indirect
 	github.com/sirupsen/logrus v1.8.1 // indirect
 	github.com/spaolacci/murmur3 v1.1.0 // indirect
 	github.com/tidwall/gjson v1.13.0 // indirect

@@ -17,6 +17,7 @@ import (
 	"github.com/zeromicro/go-zero/core/logx"
 	"math/rand"
 	"os"
+	"strconv"
 )
 
 type wsHandler struct {
@@ -40,6 +41,7 @@ type wsHandler struct {
 	//定时弹幕
 	corndanmu           *cron.Cron
 	mapCronDanmuSendIdx map[int]int
+	userId              int
 }
 
 func NewWsHandler() WsHandler {
@@ -69,6 +71,17 @@ func NewWsHandler() WsHandler {
 		cron.SecondOptional | cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.Dow,
 	)))
 	ws.mapCronDanmuSendIdx = make(map[int]int)
+
+	// 设置uid作为基本配置
+	strUserId, ok := http.CookieList["DedeUserID"]
+	if !ok {
+		logx.Infof("uid加载失败，请重新登录")
+		return nil
+	}
+	ws.userId, err = strconv.Atoi(strUserId)
+	if err != nil {
+		return nil
+	}
 	return ws
 }
 
@@ -117,7 +130,7 @@ func (w *wsHandler) startLogic() {
 	// 机器人
 	w.robotBulletCtx, w.robotBulletCancel = context.WithCancel(context.Background())
 	go logic.StartBulletRobot(w.robotBulletCtx, w.svc)
-	w.robot()
+	w.receiveDanmu()
 	logx.Info("弹幕机器人已开启")
 	// 特效欢迎
 	w.ineterractCtx, w.ineterractCancel = context.WithCancel(context.Background())
