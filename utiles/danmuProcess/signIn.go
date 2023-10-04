@@ -19,6 +19,10 @@ type SignIn struct {
 }
 
 func (signIn *SignIn) DoDanmuProcess() {
+	if *signIn.danmuContent != "签到" {
+		return
+	}
+
 	dbDirectory := "./db"
 	info, err := os.Stat(dbDirectory)
 	if os.IsNotExist(err) || !info.IsDir() {
