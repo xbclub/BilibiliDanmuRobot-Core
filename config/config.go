@@ -55,4 +55,5 @@ type Config struct {
 		AppID     string `json:",optional"`
 		SecretKey string `json:",optional"`
 	}
+	WelcomeTimeLimiter int `json:",default=1"`
 }
