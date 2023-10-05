@@ -57,5 +57,10 @@ func createDanmuProcessFuncList(w *wsHandler) []danmuProcess.DanmuProcess {
 		foreignLanguageTranslationInChineseClass.SetConfig(w.svc)
 		danmuProcessFuncList = append(danmuProcessFuncList, foreignLanguageTranslationInChineseClass)
 	}
+	if w.svc.Config.SignInEnable {
+		signInClass := danmuProcessClass.SignInClass.Create()
+		signInClass.SetConfig(w.svc)
+		danmuProcessFuncList = append(danmuProcessFuncList, signInClass)
+	}
 	return danmuProcessFuncList
 }

@@ -11,6 +11,7 @@ type DanmuProcessClass struct {
 	DrawByLotClass                           DrawByLot
 	ForeignLanguageTranslationInChineseClass ForeignLanguageTranslationInChinese
 	TraditionalToSimplifiedConversionClass   TraditionalToSimplifiedConversion
+	SignInClass                              SignIn
 }
 
 type DanmuProcess interface {
