@@ -137,6 +137,7 @@ func (w *wsHandler) startLogic() {
 	go logic.Interact(w.ineterractCtx)
 	w.welcomeEntryEffect()
 	w.welcomeInteractWord()
+	w.blockUser()
 	logx.Info("欢迎模块已开启")
 	// 礼物感谢
 	w.thanksGiftCtx, w.thankGiftCancel = context.WithCancel(context.Background())

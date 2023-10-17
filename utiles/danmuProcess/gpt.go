@@ -3,6 +3,7 @@ package danmuProcess
 import (
 	"fmt"
 	"github.com/Akegarasu/blivedm-go/message"
+	"github.com/xbclub/BilibiliDanmuRobot-Core/http"
 	"github.com/xbclub/BilibiliDanmuRobot-Core/logic"
 	"github.com/xbclub/BilibiliDanmuRobot-Core/svc"
 	"github.com/zeromicro/go-zero/core/logx"
@@ -35,6 +36,27 @@ func (gpt *Gpt) DoDanmuProcess() {
 		logic.PushToBulletSender("请尽情调戏我吧!")
 	}
 
+	uid := fmt.Sprintf("%d", gpt.fromUser.Uid)
+	userId, ok := http.CookieList["DedeUserID"]
+	// 关键字回复
+	if gpt.svcCtx.Config.KeywordReply &&
+		gpt.svcCtx.Config.KeywordReplyList != nil &&
+		len(gpt.svcCtx.Config.KeywordReplyList) > 0 &&
+		userId != uid && ok {
+
+		hit := false
+
+		for k, v := range gpt.svcCtx.Config.KeywordReplyList {
+			if strings.Contains(*gpt.danmuContent, k) {
+				logic.PushToBulletSender(v)
+				hit = true
+				break
+			}
+		}
+		if hit {
+			return
+		}
+	}
 	result := checkIsAtMe(gpt.danmuContent, gpt.svcCtx)
 	if result == none {
 		return
