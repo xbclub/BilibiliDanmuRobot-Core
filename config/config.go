@@ -55,6 +55,8 @@ type Config struct {
 		AppID     string `json:",optional"`
 		SecretKey string `json:",optional"`
 	}
-	WelcomeTimeLimiter int  `json:",default=1"`
-	SignInEnable       bool `json:",default=false"`
+	WelcomeTimeLimiter int    `json:",default=1"`
+	SignInEnable       bool   `json:",default=false"`
+	DBPath             string `json:",default=./db"`
+	DBName             string `json:",default=sqliteDataBase.db"`
 }
