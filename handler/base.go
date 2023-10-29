@@ -130,6 +130,7 @@ func (w *wsHandler) StopWsClient() {
 	}
 	w.corndanmu.Stop()
 	w.client.Stop()
+	w.svc.Db.Db.Close()
 }
 func (w *wsHandler) startLogic() {
 	w.sendBulletCtx, w.sendBulletCancel = context.WithCancel(context.Background())
