@@ -62,7 +62,7 @@ func (gpt *Gpt) SetDanmu(content *string, user *message.User) {
 
 // 检查弹幕是否在@我，返回bool和@我要说的内容
 func checkIsAtMe(msg *string, svcCtx *svc.ServiceContext) int {
-	if strings.Contains(*msg, svcCtx.Config.TalkRobotCmd) {
+	if strings.Contains(*msg, svcCtx.Config.TalkRobotCmd) && svcCtx.Config.FuzzyMatchCmd {
 		return contained
 	} else if strings.HasPrefix(*msg, svcCtx.Config.TalkRobotCmd) {
 		return hasPrefix
