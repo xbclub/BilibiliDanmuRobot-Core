@@ -2,6 +2,7 @@ package danmuProcess
 
 import (
 	"github.com/Akegarasu/blivedm-go/message"
+	_ "github.com/glebarez/go-sqlite"
 	"github.com/xbclub/BilibiliDanmuRobot-Core/svc"
 )
 
@@ -10,7 +11,6 @@ type DanmuProcessClass struct {
 	GptClass                                 Gpt
 	DrawByLotClass                           DrawByLot
 	ForeignLanguageTranslationInChineseClass ForeignLanguageTranslationInChinese
-	TraditionalToSimplifiedConversionClass   TraditionalToSimplifiedConversion
 	SignInClass                              SignIn
 }
 

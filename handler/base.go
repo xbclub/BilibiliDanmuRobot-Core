@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/Akegarasu/blivedm-go/client"
 	_ "github.com/Akegarasu/blivedm-go/utils"
+	_ "github.com/glebarez/go-sqlite"
 	"github.com/robfig/cron/v3"
 	"github.com/xbclub/BilibiliDanmuRobot-Core/config"
 	"github.com/xbclub/BilibiliDanmuRobot-Core/entity"
@@ -79,8 +80,15 @@ func NewWsHandler() WsHandler {
 		return nil
 	}
 	ws.userId, err = strconv.Atoi(strUserId)
-	if err != nil {
-		return nil
+
+	//配置数据库文件夹
+	info, err := os.Stat(ws.svc.Config.DBPath)
+	if os.IsNotExist(err) || !info.IsDir() {
+		err = os.MkdirAll(ws.svc.Config.DBPath, 0777)
+		if err != nil {
+			logx.Errorf("文件夹创建失败：%s", ws.svc.Config.DBPath)
+			return nil
+		}
 	}
 	return ws
 }
