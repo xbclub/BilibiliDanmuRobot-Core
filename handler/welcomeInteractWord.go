@@ -7,7 +7,6 @@ import (
 	"github.com/xbclub/BilibiliDanmuRobot-Core/logic"
 	"github.com/xbclub/BilibiliDanmuRobot-Core/svc"
 	"github.com/zeromicro/go-zero/core/logx"
-	"golang.org/x/time/rate"
 	"math/rand"
 	"sort"
 	"strings"
@@ -15,12 +14,13 @@ import (
 )
 
 func (w *wsHandler) welcomeInteractWord() {
-	limiter := rate.NewLimiter(1, w.svc.Config.WelcomeTimeLimiter)
+	//limiter := rate.NewLimiter(1, w.svc.Config.WelcomeTimeLimiter)
 	w.client.RegisterCustomEventHandler("INTERACT_WORD", func(s string) {
 		interact := &entity.InteractWordText{}
 		_ = json.Unmarshal([]byte(s), interact)
 		// 1 进场 2 关注 3 分享
-		if interact.Data.MsgType == 1 && limiter.AllowN(time.Now(), w.svc.Config.WelcomeTimeLimiter) {
+		//if interact.Data.MsgType == 1 && limiter.AllowN(time.Now(), w.svc.Config.WelcomeTimeLimiter) {
+		if interact.Data.MsgType == 1 {
 			if v, ok := w.svc.Config.WelcomeString[fmt.Sprint(interact.Data.Uid)]; w.svc.Config.WelcomeSwitch && ok {
 				logic.PushToBulletSender(v)
 			} else if w.svc.Config.InteractWord {
@@ -29,7 +29,7 @@ func (w *wsHandler) welcomeInteractWord() {
 					!in(interact.Data.Uname, w.svc.Config.WelcomeBlacklist) {
 					if w.svc.Config.InteractWordByTime {
 						msg := handleInterractByTime(interact.Data.Uid, welcomeInteract(interact.Data.Uname), w.svc)
-						logx.Alert(msg)
+						logx.Debug(msg)
 						logic.PushToInterractChan(&logic.InterractData{
 							Uid: interact.Data.Uid,
 							Msg: msg,
