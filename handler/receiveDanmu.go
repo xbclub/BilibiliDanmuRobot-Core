@@ -34,11 +34,11 @@ func createDanmuProcessFuncList(w *wsHandler) []danmuProcess.DanmuProcess {
 	danmuProcessClass := new(danmuProcess.DanmuProcessClass)
 	var danmuProcessFuncList []danmuProcess.DanmuProcess
 	//判断启用机器人聊天
-	if w.svc.Config.FuzzyMatchCmd {
-		gptClass := danmuProcessClass.GptClass.Create()
-		gptClass.SetConfig(w.svc)
-		danmuProcessFuncList = append(danmuProcessFuncList, gptClass)
-	}
+	//if w.svc.Config.FuzzyMatchCmd {
+	gptClass := danmuProcessClass.GptClass.Create()
+	gptClass.SetConfig(w.svc)
+	danmuProcessFuncList = append(danmuProcessFuncList, gptClass)
+	//}
 	//判断启用机器人抽签
 	if w.svc.Config.DrawByLot {
 		drawByLotClass := danmuProcessClass.DrawByLotClass.Create()
@@ -51,6 +51,7 @@ func createDanmuProcessFuncList(w *wsHandler) []danmuProcess.DanmuProcess {
 		foreignLanguageTranslationInChineseClass.SetConfig(w.svc)
 		danmuProcessFuncList = append(danmuProcessFuncList, foreignLanguageTranslationInChineseClass)
 	}
+	// 签到
 	if w.svc.Config.SignInEnable {
 		signInClass := danmuProcessClass.SignInClass.Create()
 		signInClass.SetConfig(w.svc)
