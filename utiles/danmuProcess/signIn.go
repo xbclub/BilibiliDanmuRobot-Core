@@ -51,8 +51,8 @@ func (signIn *SignIn) DoDanmuProcess() {
 	//	return
 	//}
 
-	var uid, lastday int
-	var numberOfConsecutiveCheckInDays int64
+	var uid, lastday int64
+	var numberOfConsecutiveCheckInDays int
 
 	// 获取当前时间
 	//now := time.Now().In(time.Local)
@@ -62,7 +62,7 @@ func (signIn *SignIn) DoDanmuProcess() {
 		//sqlCommandBase = "update '%d' set lastday=%d, numberOfConsecutiveCheckInDays=%d where uid=%d;"
 		// 将时间戳转换为时间对象（中国时区）
 		//lastTime := time.Unix(numberOfConsecutiveCheckInDays, 0).In(time.Local)
-		lastTime := carbon.CreateFromTimestamp(numberOfConsecutiveCheckInDays, carbon.Shanghai)
+		lastTime := carbon.CreateFromTimestamp(lastday, carbon.Shanghai)
 		if now.Year() == lastTime.Year() && now.Month() == lastTime.Month() && now.Day() == lastTime.Day()+1 {
 			//sqlCommand = fmt.Sprintf(sqlCommandBase, signIn.svcCtx.Config.RoomId, now.Unix(), numberOfConsecutiveCheckInDays+1, signIn.fromUser.Uid)
 			update := squirrel.Update("").Table(signIn.tableName).Set("lastday", now.Timestamp()).Set("numberOfConsecutiveCheckInDays", numberOfConsecutiveCheckInDays+1).Where(squirrel.Eq{"uid": signIn.fromUser.Uid})
@@ -110,6 +110,11 @@ func (signIn *SignIn) DoDanmuProcess() {
 
 			strMessage := fmt.Sprintf("%s,连续签到第1天", signIn.fromUser.Uname)
 			logic.PushToBulletSender(strMessage)
+			return
+		} else {
+			strMessage := fmt.Sprintf("%s, 今天已经签到过了！", signIn.fromUser.Uname)
+			logic.PushToBulletSender(strMessage)
+			return
 		}
 	} else if errors.Is(err, sql.ErrNoRows) {
 		//sqlCommandBase = "insert into '%d' (uid,lastday,numberOfConsecutiveCheckInDays)  values (%d, %d, %d);"
@@ -135,6 +140,7 @@ func (signIn *SignIn) DoDanmuProcess() {
 		}
 		strMessage := fmt.Sprintf("%s,连续签到第1天", signIn.fromUser.Uname)
 		logic.PushToBulletSender(strMessage)
+		return
 	} else {
 		logx.Errorf("SQL执行失败：%s", err)
 		return
