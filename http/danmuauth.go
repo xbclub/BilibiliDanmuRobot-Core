@@ -22,7 +22,7 @@ func GetDanmuToken(roomid int, spiInfo *entity.SPIInfo) (danmuAuthDatas *entity.
 		return nil, err
 	}
 	// 先解析响应状态
-	logx.Alert(string(resp.Body()))
+	logx.Debug(string(resp.Body()))
 	danmuAuthDatas = &entity.DanmuAuthData{}
 	if err = json.Unmarshal(resp.Body(), danmuAuthDatas); err != nil {
 		logx.Error("Unmarshal失败：", err, "body:", string(resp.Body()))

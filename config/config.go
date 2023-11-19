@@ -48,4 +48,15 @@ type Config struct {
 	PKNotice             bool     `json:",default=true"`
 	WelcomeBlacklistWide []string `json:",optional"`
 	WelcomeBlacklist     []string `json:",optional"`
+	DrawByLot            bool     `json:",default=true"`
+	//TraditionalToSimplifiedConversion   bool     `json:",default=false"`
+	ForeignLanguageTranslationInChinese struct {
+		Enabled   bool   `json:",default=false"`
+		AppID     string `json:",optional"`
+		SecretKey string `json:",optional"`
+	}
+	//WelcomeTimeLimiter int    `json:",default=1"`
+	SignInEnable bool   `json:",default=true"`
+	DBPath       string `json:",default=./db"`
+	DBName       string `json:",default=sqliteDataBase.db"`
 }

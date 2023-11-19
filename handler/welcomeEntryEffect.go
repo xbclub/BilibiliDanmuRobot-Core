@@ -15,6 +15,23 @@ import (
 
 // 进场特效欢迎
 func (w *wsHandler) welcomeEntryEffect() {
+	// 限制器方案待商议
+	//limiter := rate.NewLimiter(1, w.svc.Config.WelcomeTimeLimiter)
+	//w.client.RegisterCustomEventHandler("ENTRY_EFFECT", func(s string) {
+	//	if limiter.AllowN(time.Now(), w.svc.Config.WelcomeTimeLimiter) {
+	//		entry := &entity.EntryEffectText{}
+	//		_ = json.Unmarshal([]byte(s), entry)
+	//		if v, ok := w.svc.Config.WelcomeString[fmt.Sprint(entry.Data.Uid)]; w.svc.Config.WelcomeSwitch && ok && w.svc.Config.EntryEffect {
+	//			logic.PushToBulletSender(v)
+	//		} else if w.svc.Config.EntryEffect {
+	//			logx.Info("特效欢迎")
+	//			logic.PushToInterractChan(&logic.InterractData{
+	//				Uid: entry.Data.Uid,
+	//				Msg: getRandomWelcome(entry.Data.CopyWriting, w.svc),
+	//			})
+	//		}
+	//	}
+	//})
 	w.client.RegisterCustomEventHandler("ENTRY_EFFECT", func(s string) {
 		entry := &entity.EntryEffectText{}
 		_ = json.Unmarshal([]byte(s), entry)
