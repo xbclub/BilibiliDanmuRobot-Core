@@ -45,12 +45,6 @@ func createDanmuProcessFuncList(w *wsHandler) []danmuProcess.DanmuProcess {
 		drawByLotClass.SetConfig(w.svc)
 		danmuProcessFuncList = append(danmuProcessFuncList, drawByLotClass)
 	}
-	//判断启用翻译功能
-	if w.svc.Config.ForeignLanguageTranslationInChinese.Enabled {
-		foreignLanguageTranslationInChineseClass := danmuProcessClass.ForeignLanguageTranslationInChineseClass.Create()
-		foreignLanguageTranslationInChineseClass.SetConfig(w.svc)
-		danmuProcessFuncList = append(danmuProcessFuncList, foreignLanguageTranslationInChineseClass)
-	}
 	// 签到
 	if w.svc.Config.SignInEnable {
 		signInClass := danmuProcessClass.SignInClass.Create()

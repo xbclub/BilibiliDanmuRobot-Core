@@ -8,10 +8,9 @@ import (
 
 // 所有弹幕处理类
 type DanmuProcessClass struct {
-	GptClass                                 Gpt
-	DrawByLotClass                           DrawByLot
-	ForeignLanguageTranslationInChineseClass ForeignLanguageTranslationInChinese
-	SignInClass                              SignIn
+	GptClass       Gpt
+	DrawByLotClass DrawByLot
+	SignInClass    SignIn
 }
 
 type DanmuProcess interface {

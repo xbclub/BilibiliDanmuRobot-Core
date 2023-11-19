@@ -50,11 +50,6 @@ type Config struct {
 	WelcomeBlacklist     []string `json:",optional"`
 	DrawByLot            bool     `json:",default=true"`
 	//TraditionalToSimplifiedConversion   bool     `json:",default=false"`
-	ForeignLanguageTranslationInChinese struct {
-		Enabled   bool   `json:",default=false"`
-		AppID     string `json:",optional"`
-		SecretKey string `json:",optional"`
-	} `json:",optional"`
 	//WelcomeTimeLimiter int    `json:",default=1"`
 	SignInEnable bool   `json:",default=true"`
 	DBPath       string `json:",default=./db"`
