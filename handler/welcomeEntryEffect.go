@@ -36,7 +36,11 @@ func (w *wsHandler) welcomeEntryEffect() {
 		entry := &entity.EntryEffectText{}
 		_ = json.Unmarshal([]byte(s), entry)
 		if v, ok := w.svc.Config.WelcomeString[fmt.Sprint(entry.Data.Uid)]; w.svc.Config.WelcomeSwitch && ok && w.svc.Config.EntryEffect {
-			logic.PushToBulletSender(v)
+			//logic.PushToBulletSender(v)
+			logic.PushToInterractChan(&logic.InterractData{
+				Uid: entry.Data.Uid,
+				Msg: v,
+			})
 		} else if w.svc.Config.EntryEffect {
 			logx.Info("特效欢迎")
 			logic.PushToInterractChan(&logic.InterractData{

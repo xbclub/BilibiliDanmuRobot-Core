@@ -22,7 +22,11 @@ func (w *wsHandler) welcomeInteractWord() {
 		//if interact.Data.MsgType == 1 && limiter.AllowN(time.Now(), w.svc.Config.WelcomeTimeLimiter) {
 		if interact.Data.MsgType == 1 {
 			if v, ok := w.svc.Config.WelcomeString[fmt.Sprint(interact.Data.Uid)]; w.svc.Config.WelcomeSwitch && ok {
-				logic.PushToBulletSender(v)
+				//logic.PushToBulletSender(v)
+				logic.PushToInterractChan(&logic.InterractData{
+					Uid: interact.Data.Uid,
+					Msg: v,
+				})
 			} else if w.svc.Config.InteractWord {
 				// 不在黑名单才欢迎
 				if !inWide(interact.Data.Uname, w.svc.Config.WelcomeBlacklistWide) &&
