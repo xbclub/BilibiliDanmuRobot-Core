@@ -32,6 +32,8 @@ func (gpt *Gpt) DoDanmuProcess() {
 		logx.Info(s)
 		logic.PushToBulletSender(" ")
 		logic.PushToBulletSender(s)
+		logic.PushToBulletSender("发送 签到 即可签到")
+		logic.PushToBulletSender("发送 抽签 即可抽签")
 		logic.PushToBulletSender("请尽情调戏我吧!")
 	}
 
