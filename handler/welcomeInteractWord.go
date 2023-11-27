@@ -68,6 +68,9 @@ func (w *wsHandler) welcomeInteractWord() {
 			}
 		} else if interact.Data.MsgType == 3 {
 			if w.svc.Config.InteractWord {
+				if len(interact.Data.Uname) == 0 {
+					return
+				}
 				msg := "感谢 " + shortName(interact.Data.Uname, 8, w.svc.Config.DanmuLen) + " 的分享!"
 				logic.PushToBulletSender(msg)
 				if w.svc.Config.FocusDanmu != nil && len(w.svc.Config.FocusDanmu) > 0 {

@@ -16,8 +16,8 @@ const (
 )
 
 type Gpt struct {
-	danmuContent *string
-	fromUser     *message.User
+	danmuContent string
+	fromUser     message.User
 	svcCtx       *svc.ServiceContext
 }
 
@@ -27,7 +27,7 @@ func (gpt *Gpt) Create() DanmuProcess {
 
 func (gpt *Gpt) DoDanmuProcess() {
 	// @帮助 打出来关键词
-	if strings.Compare("@帮助", *gpt.danmuContent) == 0 {
+	if strings.Compare("@帮助", gpt.danmuContent) == 0 {
 		s := fmt.Sprintf("发送带有 %s 的弹幕和我互动", gpt.svcCtx.Config.TalkRobotCmd)
 		logx.Info(s)
 		logic.PushToBulletSender(" ")
@@ -35,18 +35,18 @@ func (gpt *Gpt) DoDanmuProcess() {
 		logic.PushToBulletSender("请尽情调戏我吧!")
 	}
 
-	result := checkIsAtMe(gpt.danmuContent, gpt.svcCtx)
+	result := checkIsAtMe(&gpt.danmuContent, gpt.svcCtx)
 	if result == none {
 		return
 	}
 	content := ""
 	if result == contained {
-		content = strings.ReplaceAll(*gpt.danmuContent, gpt.svcCtx.Config.TalkRobotCmd, "")
+		content = strings.ReplaceAll(gpt.danmuContent, gpt.svcCtx.Config.TalkRobotCmd, "")
 	} else if result == hasPrefix {
-		content = strings.TrimPrefix(*gpt.danmuContent, gpt.svcCtx.Config.TalkRobotCmd)
+		content = strings.TrimPrefix(gpt.danmuContent, gpt.svcCtx.Config.TalkRobotCmd)
 	}
 	//如果发现弹幕在@我，那么调用机器人进行回复
-	if len(content) > 0 && *gpt.danmuContent != gpt.svcCtx.Config.EntryMsg {
+	if len(content) > 0 && gpt.danmuContent != gpt.svcCtx.Config.EntryMsg {
 		logic.PushToBulletRobot(content)
 	}
 }
@@ -55,7 +55,7 @@ func (gpt *Gpt) SetConfig(svcCtx *svc.ServiceContext) {
 	gpt.svcCtx = svcCtx
 }
 
-func (gpt *Gpt) SetDanmu(content *string, user *message.User) {
+func (gpt *Gpt) SetDanmu(content string, user message.User) {
 	gpt.danmuContent = content
 	gpt.fromUser = user
 }

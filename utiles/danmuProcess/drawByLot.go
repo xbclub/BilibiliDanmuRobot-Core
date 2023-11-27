@@ -10,8 +10,8 @@ import (
 )
 
 type DrawByLot struct {
-	danmuContent *string
-	fromUser     *message.User
+	danmuContent string
+	fromUser     message.User
 	svcCtx       *svc.ServiceContext
 }
 
@@ -20,7 +20,7 @@ func (drawByLot *DrawByLot) Create() DanmuProcess {
 }
 
 func (drawByLot *DrawByLot) DoDanmuProcess() {
-	if strings.Compare("抽签", *drawByLot.danmuContent) == 0 {
+	if strings.Compare("抽签", drawByLot.danmuContent) == 0 {
 		var strMeg string
 		iRes := rand.Intn(25)
 		var strRes string
@@ -45,7 +45,7 @@ func (drawByLot *DrawByLot) SetConfig(svcCtx *svc.ServiceContext) {
 	drawByLot.svcCtx = svcCtx
 }
 
-func (drawByLot *DrawByLot) SetDanmu(content *string, user *message.User) {
+func (drawByLot *DrawByLot) SetDanmu(content string, user message.User) {
 	drawByLot.danmuContent = content
 	drawByLot.fromUser = user
 }
