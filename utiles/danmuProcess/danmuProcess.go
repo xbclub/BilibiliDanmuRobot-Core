@@ -18,5 +18,5 @@ type DanmuProcess interface {
 	// 弹幕处理函数
 	DoDanmuProcess()
 	SetConfig(svcCtx *svc.ServiceContext)
-	SetDanmu(content *string, user *message.User)
+	SetDanmu(content string, user message.User)
 }

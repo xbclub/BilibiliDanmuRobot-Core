@@ -19,7 +19,7 @@ func (w *wsHandler) receiveDanmu() {
 			strContent = re.ReplaceAllString(strContent, "")
 			if len(strContent) > 0 {
 				for _, danmuProcessFunc := range danmuProcessFuncList {
-					danmuProcessFunc.SetDanmu(&strContent, danmaku.Sender)
+					danmuProcessFunc.SetDanmu(strContent, *danmaku.Sender)
 					danmuProcessFunc.DoDanmuProcess()
 				}
 			}
