@@ -3,7 +3,7 @@ module github.com/xbclub/BilibiliDanmuRobot-Core
 go 1.21.1
 
 require (
-	github.com/Akegarasu/blivedm-go v1.5.1-0.20230921012722-3c026c815e19
+	github.com/Akegarasu/blivedm-go v1.5.1
 	github.com/Masterminds/squirrel v1.5.4
 	github.com/avast/retry-go/v4 v4.5.0
 	github.com/glebarez/go-sqlite v1.21.2

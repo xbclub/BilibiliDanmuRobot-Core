@@ -1,5 +1,7 @@
 github.com/Akegarasu/blivedm-go v1.5.1-0.20230921012722-3c026c815e19 h1:gyI7788E+VQvvJLHjDvpRDcWma+v431CqT6OvQSl3Rc=
 github.com/Akegarasu/blivedm-go v1.5.1-0.20230921012722-3c026c815e19/go.mod h1:jQ1ayNatx++e3Z3eLxzBKUQGOhDvI9ab5f0bnUtbkug=
+github.com/Akegarasu/blivedm-go v1.5.1 h1:DnIgUrZXS+B57miL9VY5J0pjcCqhPrs6V04Iozl+y7I=
+github.com/Akegarasu/blivedm-go v1.5.1/go.mod h1:jQ1ayNatx++e3Z3eLxzBKUQGOhDvI9ab5f0bnUtbkug=
 github.com/Masterminds/squirrel v1.5.4 h1:uUcX/aBc8O7Fg9kaISIUsHXdKuqehiXAMQTYX8afzqM=
 github.com/Masterminds/squirrel v1.5.4/go.mod h1:NNaOrjSoIDfDA40n7sr2tPNZRfjzjA400rg+riTZj10=
 github.com/andybalholm/brotli v1.0.5 h1:8uQZIdzKmjc/iuPu7O2ioW48L81FgatrcpfFmiq/cCs=
