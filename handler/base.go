@@ -94,6 +94,7 @@ func NewWsHandler() WsHandler {
 		return nil
 	}
 	ws.userId, err = strconv.Atoi(strUserId)
+	ctx.RobotID = strUserId
 	roominfo, err := http.RoomInit(c.RoomId)
 	if err != nil {
 		logx.Error()

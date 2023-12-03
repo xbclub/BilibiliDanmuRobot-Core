@@ -43,7 +43,7 @@ func StartDanmuLogic(ctx context.Context, svcCtx *svc.ServiceContext) {
 			uid := fmt.Sprintf("%.0f", from[0].(float64))
 			re := regexp.MustCompile("\\[(.*?)\\]")
 			danmumsg = re.ReplaceAllString(danmumsg, "")
-			if len(danmumsg) > 0 {
+			if len(danmumsg) > 0 && uid != svcCtx.RobotID {
 				// 机器人相关
 				go DoDanmuProcess(danmumsg, svcCtx)
 				// 签到
