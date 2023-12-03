@@ -12,6 +12,7 @@ import (
 	"github.com/xbclub/BilibiliDanmuRobot-Core/entity"
 	"github.com/xbclub/BilibiliDanmuRobot-Core/http"
 	"github.com/xbclub/BilibiliDanmuRobot-Core/logic"
+	"github.com/xbclub/BilibiliDanmuRobot-Core/logic/danmu"
 	"github.com/xbclub/BilibiliDanmuRobot-Core/svc"
 	"github.com/xbclub/BilibiliDanmuRobot-Core/utiles"
 	"github.com/zeromicro/go-zero/core/conf"
@@ -39,6 +40,9 @@ type wsHandler struct {
 	//pk提醒
 	pkCtx    context.Context
 	pkCancel context.CancelFunc
+	//弹幕处理
+	danmuLogicCtx    context.Context
+	danmuLogicCancel context.CancelFunc
 	//定时弹幕
 	corndanmu           *cron.Cron
 	mapCronDanmuSendIdx map[int]int
@@ -90,7 +94,12 @@ func NewWsHandler() WsHandler {
 		return nil
 	}
 	ws.userId, err = strconv.Atoi(strUserId)
-
+	roominfo, err := http.RoomInit(c.RoomId)
+	if err != nil {
+		logx.Error()
+		//return nil
+	}
+	ctx.UserID = roominfo.Data.Uid
 	return ws
 }
 
@@ -126,6 +135,9 @@ func (w *wsHandler) StopWsClient() {
 	if w.pkCancel != nil {
 		w.pkCancel()
 	}
+	if w.danmuLogicCancel != nil {
+		w.danmuLogicCancel()
+	}
 	for _, i := range w.corndanmu.Entries() {
 		w.corndanmu.Remove(i.ID)
 	}
@@ -140,6 +152,9 @@ func (w *wsHandler) startLogic() {
 	// 机器人
 	w.robotBulletCtx, w.robotBulletCancel = context.WithCancel(context.Background())
 	go logic.StartBulletRobot(w.robotBulletCtx, w.svc)
+	// 弹幕逻辑
+	w.danmuLogicCtx, w.danmuLogicCancel = context.WithCancel(context.Background())
+	go danmu.StartDanmuLogic(w.danmuLogicCtx, w.svc)
 	w.receiveDanmu()
 	logx.Info("弹幕机器人已开启")
 	// 特效欢迎
@@ -148,6 +163,8 @@ func (w *wsHandler) startLogic() {
 	w.welcomeEntryEffect()
 	w.welcomeInteractWord()
 	logx.Info("欢迎模块已开启")
+	// 天选自动关闭欢迎
+	w.anchorLot()
 	// 礼物感谢
 	w.thanksGiftCtx, w.thankGiftCancel = context.WithCancel(context.Background())
 	go logic.ThanksGift(w.thanksGiftCtx, w.svc)
@@ -159,6 +176,8 @@ func (w *wsHandler) startLogic() {
 	w.pkBattleStart()
 	w.pkBattleEnd()
 	logx.Info("pk提醒已开启")
+
+	logx.Info("弹幕处理已开启")
 	//定时弹幕
 	w.corndanmuStart()
 
@@ -210,10 +229,10 @@ func (w *wsHandler) corndanmuStart() {
 	if w.svc.Config.CronDanmu == false {
 		return
 	}
-	for n, danmu := range w.svc.Config.CronDanmuList {
-		if danmu.Danmu != nil {
+	for n, danmux := range w.svc.Config.CronDanmuList {
+		if danmux.Danmu != nil {
 			i := n
-			danmus := danmu
+			danmus := danmux
 			_, err := w.corndanmu.AddFunc(danmus.Cron, func() {
 				if len(danmus.Danmu) > 0 {
 					if danmus.Random {

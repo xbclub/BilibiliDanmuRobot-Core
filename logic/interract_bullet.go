@@ -13,8 +13,8 @@ var interractGiver *InterractGiver
 type InterractGiver struct {
 	interractFilter map[int64]time.Time
 	locked          *sync.Mutex
-	tableMu         sync.RWMutex
-	interractChan   chan *InterractData
+	//tableMu         sync.RWMutex
+	interractChan chan *InterractData
 }
 type InterractData struct {
 	Uid int64
@@ -30,8 +30,8 @@ func Interact(ctx context.Context) {
 	interractGiver = &InterractGiver{
 		interractFilter: map[int64]time.Time{},
 		locked:          new(sync.Mutex),
-		tableMu:         sync.RWMutex{},
-		interractChan:   make(chan *InterractData, 1000),
+		//tableMu:         sync.RWMutex{},
+		interractChan: make(chan *InterractData, 1000),
 	}
 
 	var g *InterractData

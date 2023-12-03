@@ -9,10 +9,15 @@ import (
 )
 
 type ServiceContext struct {
-	Config       config.Config
-	OtherSideUid map[int64]bool
-	TopUid       map[int64]bool
-	SininModel   model.SingInModel
+	Config        config.Config
+	OtherSideUid  map[int64]bool
+	TopUid        map[int64]bool
+	SininModel    model.SingInModel
+	UserID        int64
+	Autointerract struct {
+		EntryEffect  bool
+		InteractWord bool
+	}
 }
 
 func NewServiceContext(c config.Config) *ServiceContext {
@@ -26,5 +31,6 @@ func NewServiceContext(c config.Config) *ServiceContext {
 		TopUid:       make(map[int64]bool),
 		SininModel:   model.NewSingInModel(db, int64(c.RoomId)),
 		Config:       c,
+		UserID:       0,
 	}
 }
