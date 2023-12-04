@@ -2,6 +2,7 @@ package http
 
 import (
 	"encoding/json"
+	"errors"
 	"github.com/go-resty/resty/v2"
 	"github.com/xbclub/BilibiliDanmuRobot-Core/entity"
 	"github.com/zeromicro/go-zero/core/logx"
@@ -13,7 +14,7 @@ import (
 func GetLoginUrl() (*entity.LoginUrl, error) {
 	var err error
 	var resp *resty.Response
-	var url = "https://passport.bilibili.com/qrcode/getLoginUrl"
+	var url = "https://passport.bilibili.com/x/passport-login/web/qrcode/generate"
 
 	r := &entity.LoginUrl{}
 	if resp, err = cli.R().
@@ -35,7 +36,7 @@ func GetLoginUrl() (*entity.LoginUrl, error) {
 // 验证登录的同时，将cookie赋值
 func GetLoginInfo(oauthKey string) (*entity.LoginInfoData, error) {
 	var err error
-	var url = "https://passport.bilibili.com/qrcode/getLoginInfo?oauthKey=" + oauthKey
+	var url = "https://passport.bilibili.com/x/passport-login/web/qrcode/poll?qrcode_key=" + oauthKey
 	var resp *resty.Response
 	var data *entity.LoginInfoData
 	var file *os.File
@@ -45,24 +46,30 @@ func GetLoginInfo(oauthKey string) (*entity.LoginInfoData, error) {
 
 		if resp, err = cli.R().
 			SetHeader("user-agent", userAgent).
-			Post(url); err != nil {
+			Get(url); err != nil {
 			logx.Error("请求getLoginInfo失败：", err)
 			return nil, err
 		}
-
 		if err = json.Unmarshal(resp.Body(), pre); err != nil {
 			logx.Error("Unmarshal失败：", err, "body:", string(resp.Body()))
 			return nil, err
 		}
 
-		if pre.Status {
+		if pre.Code == 0 {
 			data = &entity.LoginInfoData{}
 			if err = json.Unmarshal(resp.Body(), data); err != nil {
 				logx.Error("Unmarshal失败：", err, "body:", string(resp.Body()))
 				return nil, err
 			}
-			logx.Info("登录成功！")
-			break
+			if data.Data.Code == 0 {
+				logx.Info("登录成功！")
+				break
+			} else if data.Data.Code == 86038 {
+				logx.Error(data.Data.Message)
+				return nil, errors.New(data.Data.Message)
+			}
+		} else {
+			return nil, errors.New(pre.Message)
 		}
 
 		time.Sleep(5 * time.Second)
