@@ -2,16 +2,12 @@ package utiles
 
 import (
 	"bytes"
-	"errors"
 	"fmt"
 	"github.com/skip2/go-qrcode"
 	"github.com/zeromicro/go-zero/core/logx"
-	"golang.org/x/crypto/ssh/terminal"
-	"io/ioutil"
 	"math"
 	"math/rand"
 	"os"
-	"runtime"
 	"time"
 )
 
@@ -20,7 +16,6 @@ var (
 	trueColorMode bool
 	spread        float64
 	freq          float64
-	message       string
 )
 
 const (
@@ -90,18 +85,6 @@ func GenerateQr(message string) error {
 	if err := qrcode.WriteFile(message, qrcode.Medium, 256, "./login.jpg"); err != nil {
 		logx.Error("生成二维码失败：", err)
 		return err
-	}
-	if runtime.GOOS != "windows" && !terminal.IsTerminal(0) {
-		pipeBytes, err := ioutil.ReadAll(os.Stdin)
-		if err != nil {
-			//fmt.Fprintln(os.Stderr, "Failed to read Stdin:", err.Error())
-			return err
-		}
-		message = string(pipeBytes)
-	}
-	if message == "" {
-		//fmt.Fprintln(os.Stderr, "Message is empty")
-		return errors.New("Message is empty")
 	}
 	//fmt.Println("Message:", message)
 	if !trueColorMode {
