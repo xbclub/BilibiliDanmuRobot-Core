@@ -51,7 +51,10 @@ type Config struct {
 	DrawByLot            bool     `json:",default=true"`
 	//TraditionalToSimplifiedConversion   bool     `json:",default=false"`
 	//WelcomeTimeLimiter int    `json:",default=1"`
-	SignInEnable bool   `json:",default=true"`
-	DBPath       string `json:",default=./db"`
-	DBName       string `json:",default=sqliteDataBase.db"`
+	SignInEnable     bool              `json:",default=true"`
+	DBPath           string            `json:",default=./db"`
+	DBName           string            `json:",default=sqliteDataBase.db"`
+	ShowBlockMsg     bool              `json:",default=true"`  // 禁言提醒开关
+	KeywordReply     bool              `json:",default=false"` //关键词回复开关
+	KeywordReplyList map[string]string `json:",optional"`      // 关键词回复列表
 }

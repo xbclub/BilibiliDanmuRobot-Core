@@ -56,6 +56,10 @@ func StartDanmuLogic(ctx context.Context, svcCtx *svc.ServiceContext) {
 				}
 				// 主播指令控制
 				go DoCMDProcess(danmumsg, uid, svcCtx)
+				// 关键词回复
+				if svcCtx.Config.KeywordReply {
+					go KeywordReply(danmumsg, svcCtx)
+				}
 			}
 			// 实时输出弹幕消息
 			logx.Infof("%v %s:%s", uid, from[1], danmumsg)

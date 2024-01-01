@@ -13,7 +13,6 @@ require (
 	github.com/sashabaranov/go-openai v1.15.3
 	github.com/skip2/go-qrcode v0.0.0-20200617195104-da1b6568686e
 	github.com/zeromicro/go-zero v1.5.6
-	golang.org/x/crypto v0.13.0
 	gorm.io/gorm v1.25.5
 )
 
@@ -40,7 +39,6 @@ require (
 	go.uber.org/automaxprocs v1.5.3 // indirect
 	golang.org/x/net v0.15.0 // indirect
 	golang.org/x/sys v0.12.0 // indirect
-	golang.org/x/term v0.12.0 // indirect
 	google.golang.org/protobuf v1.31.0 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	modernc.org/libc v1.22.5 // indirect

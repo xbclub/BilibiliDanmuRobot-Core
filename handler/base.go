@@ -176,6 +176,8 @@ func (w *wsHandler) startLogic() {
 	go logic.PK(w.pkCtx, w.svc)
 	w.pkBattleStart()
 	w.pkBattleEnd()
+	// 禁言用户提醒
+	w.blockUser()
 	logx.Info("pk提醒已开启")
 
 	logx.Info("弹幕处理已开启")
