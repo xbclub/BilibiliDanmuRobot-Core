@@ -22,9 +22,9 @@ func (w *wsHandler) blockUser() {
 			}
 			op := ""
 			if info.Data.Operator == 2 {
-				op = "禁言"
-			} else {
 				op = "解开禁言"
+			} else {
+				op = "禁言"
 			}
 			s := fmt.Sprintf("用户 %s 被管理员 %s!", info.Data.UName, op)
 			logic.PushToBulletSender(s)

@@ -76,6 +76,7 @@ func NewWsHandler() WsHandler {
 	ws := new(wsHandler)
 	err = ws.starthttp()
 	if err != nil {
+		logx.Error(err)
 		return nil
 	}
 	ws.client = client.NewClient(ctx.Config.RoomId)

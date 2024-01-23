@@ -1,13 +1,16 @@
 package http
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"github.com/avast/retry-go/v4"
-	"github.com/go-resty/resty/v2"
 	"github.com/xbclub/BilibiliDanmuRobot-Core/entity"
 	"github.com/xbclub/BilibiliDanmuRobot-Core/svc"
 	"github.com/zeromicro/go-zero/core/logx"
+	"io"
+	"mime/multipart"
+	"net/http"
 	"strconv"
 	"time"
 )
@@ -34,35 +37,29 @@ import (
 func Send(msg string, svcCtx *svc.ServiceContext) error {
 	var err error
 	var url = "https://api.live.bilibili.com/msg/send"
-	var resp *resty.Response
 	var respdata *entity.DanmuResp = new(entity.DanmuResp)
 	m := make(map[string]string)
 	m["bubble"] = "5"
 	m["msg"] = msg
 	m["color"] = "4546550"
-	m["mode"] = "4"
+	//m["mode"] = "4"
 	m["fontsize"] = "25"
 	m["rnd"] = strconv.FormatInt(time.Now().Unix(), 10)
 	m["roomid"] = strconv.Itoa(svcCtx.Config.RoomId)
 	m["csrf"] = CookieList["bili_jct"]
 	m["csrf_token"] = CookieList["bili_jct"]
 	err = retry.Do(func() error {
-		if resp, err = cli.R().
-			SetHeader("user-agent", userAgent).
-			SetHeader("cookie", CookieStr).
-			SetFormData(m).
-			Post(url); err != nil {
+		_, data, err := postWithFormData(http.MethodPost, url, userAgent, CookieStr, &m)
+		if err != nil {
 			logx.Errorf("请求send失败：%v", err)
 			return err
 		}
-		//respdata := entity.DanmuResp{}
-		err = json.Unmarshal(resp.Body(), respdata)
+		err = json.Unmarshal(data, respdata)
 		if err != nil {
-			//fmt.Println(string(resp.Body()))
 			logx.Errorf("send弹幕响应解析失败:%v", err)
 			return nil
 		}
-		if respdata.Code == 10031 {
+		if respdata.Code != 0 {
 			logx.Infof("请求send失败:%s", respdata.Msg)
 			return errors.New(respdata.Msg)
 		}
@@ -72,4 +69,24 @@ func Send(msg string, svcCtx *svc.ServiceContext) error {
 		logx.Error(err)
 	}
 	return nil
+}
+func postWithFormData(method, url, ua, cookie string, postData *map[string]string) (int, []byte, error) {
+	body := new(bytes.Buffer)
+	w := multipart.NewWriter(body)
+	for k, v := range *postData {
+		w.WriteField(k, v)
+	}
+	w.Close()
+	req, _ := http.NewRequest(method, url, body)
+	req.Header.Set("Content-Type", w.FormDataContentType())
+	req.Header.Set("Cookie", cookie)
+	req.Header.Set("user-agent", ua)
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		logx.Error(err)
+		return 0, nil, err
+	}
+	data, _ := io.ReadAll(resp.Body)
+	resp.Body.Close()
+	return resp.StatusCode, data, nil
 }
