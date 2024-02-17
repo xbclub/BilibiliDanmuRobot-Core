@@ -45,7 +45,7 @@ func ThanksGift(ctx context.Context, svcCtx *svc.ServiceContext) {
 			goto END
 		case <-t.C:
 			thanksGiver.locked.Lock()
-			summarizeGift(svcCtx.Config.DanmuLen)
+			summarizeGift(svcCtx.Config.DanmuLen, svcCtx.Config.ThanksMinCost)
 			thanksGiver.locked.Unlock()
 			t.Reset(w)
 		case g = <-thanksGiver.giftChan:
@@ -64,7 +64,7 @@ func ThanksGift(ctx context.Context, svcCtx *svc.ServiceContext) {
 END:
 }
 
-func summarizeGift(danmuLen int) {
+func summarizeGift(danmuLen int, minCost int) {
 	for name, m := range thanksGiver.giftTable {
 		sumCost := 0
 		giftstring := []string{}
@@ -92,7 +92,9 @@ func summarizeGift(danmuLen int) {
 		}
 
 		ms := []rune(msg)
-		if len(ms) > danmuLen {
+		if sumCost < minCost {
+			// discard
+		} else if len(ms) > danmuLen {
 			PushToBulletSender("感谢 " + name + " 的")
 			PushToBulletSender(msgShort)
 		} else {

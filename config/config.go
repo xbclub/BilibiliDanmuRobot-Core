@@ -19,6 +19,7 @@ type Config struct {
 	WelcomeDanmu       []string          `json:",default='欢迎 {user} ~'"`
 	ThanksGift         bool              `json:",default=false"`
 	ThanksGiftTimeout  int               `json:",default=3"`
+	ThanksMinCost      int               `json:",default=0"`
 	CustomizeBullet    bool              `json:",default=false"`
 	InteractWord       bool              `json:",default=false"`
 	InteractWordByTime bool              `json:",default=false"`
