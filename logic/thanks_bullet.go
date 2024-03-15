@@ -15,10 +15,11 @@ import (
 var thanksGiver *GiftThanksGiver
 
 type GiftThanksGiver struct {
-	giftTable map[string]map[string]map[string]int
-	locked    *sync.Mutex
-	tableMu   sync.RWMutex
-	giftChan  chan *entity.SendGiftText
+	giftNotBlindBoxTable map[string]map[string]map[string]int
+	giftBlindBoxTable    map[string]map[string]map[string]int
+	locked               *sync.Mutex
+	tableMu              sync.RWMutex
+	giftChan             chan *entity.SendGiftText
 }
 
 func PushToGiftChan(g *entity.SendGiftText) {
@@ -28,10 +29,11 @@ func PushToGiftChan(g *entity.SendGiftText) {
 func ThanksGift(ctx context.Context, svcCtx *svc.ServiceContext) {
 
 	thanksGiver = &GiftThanksGiver{
-		giftTable: make(map[string]map[string]map[string]int),
-		locked:    new(sync.Mutex),
-		tableMu:   sync.RWMutex{},
-		giftChan:  make(chan *entity.SendGiftText, 1000),
+		giftNotBlindBoxTable: make(map[string]map[string]map[string]int),
+		giftBlindBoxTable:    make(map[string]map[string]map[string]int),
+		locked:               new(sync.Mutex),
+		tableMu:              sync.RWMutex{},
+		giftChan:             make(chan *entity.SendGiftText, 1000),
 	}
 
 	var g *entity.SendGiftText
@@ -50,14 +52,27 @@ func ThanksGift(ctx context.Context, svcCtx *svc.ServiceContext) {
 			t.Reset(w)
 		case g = <-thanksGiver.giftChan:
 			thanksGiver.locked.Lock()
-			if _, ok := thanksGiver.giftTable[g.Data.Uname]; !ok {
-				thanksGiver.giftTable[g.Data.Uname] = make(map[string]map[string]int)
+			if g.Data.BlindGift.OriginalGiftName == "" {
+				//fmt.Printf("非盲盒: ")
+				if _, ok := thanksGiver.giftNotBlindBoxTable[g.Data.Uname]; !ok {
+					thanksGiver.giftNotBlindBoxTable[g.Data.Uname] = make(map[string]map[string]int)
+				}
+				if _, ok := thanksGiver.giftNotBlindBoxTable[g.Data.Uname][g.Data.GiftName]; !ok {
+					thanksGiver.giftNotBlindBoxTable[g.Data.Uname][g.Data.GiftName] = make(map[string]int)
+				}
+				thanksGiver.giftNotBlindBoxTable[g.Data.Uname][g.Data.GiftName]["cost"] += g.Data.Price
+				thanksGiver.giftNotBlindBoxTable[g.Data.Uname][g.Data.GiftName]["count"] += g.Data.Num
+			} else {
+				//fmt.Printf("盲盒: ")
+				if _, ok := thanksGiver.giftBlindBoxTable[g.Data.Uname]; !ok {
+					thanksGiver.giftBlindBoxTable[g.Data.Uname] = make(map[string]map[string]int)
+				}
+				if _, ok := thanksGiver.giftBlindBoxTable[g.Data.Uname][g.Data.GiftName]; !ok {
+					thanksGiver.giftBlindBoxTable[g.Data.Uname][g.Data.BlindGift.OriginalGiftName] = make(map[string]int)
+				}
+				thanksGiver.giftBlindBoxTable[g.Data.Uname][g.Data.BlindGift.OriginalGiftName]["count"] += g.Data.Num
+				thanksGiver.giftBlindBoxTable[g.Data.Uname][g.Data.BlindGift.OriginalGiftName]["profit_and_loss"] += g.Data.Price - g.Data.BlindGift.OriginalGiftPrice
 			}
-			if _, ok := thanksGiver.giftTable[g.Data.Uname][g.Data.GiftName]; !ok {
-				thanksGiver.giftTable[g.Data.Uname][g.Data.GiftName] = make(map[string]int)
-			}
-			thanksGiver.giftTable[g.Data.Uname][g.Data.GiftName]["cost"] += g.Data.Price
-			thanksGiver.giftTable[g.Data.Uname][g.Data.GiftName]["count"] += g.Data.Num
 			thanksGiver.locked.Unlock()
 		}
 	}
@@ -65,7 +80,7 @@ END:
 }
 
 func summarizeGift(danmuLen int, minCost int) {
-	for name, m := range thanksGiver.giftTable {
+	for name, m := range thanksGiver.giftNotBlindBoxTable {
 		sumCost := 0
 		giftstring := []string{}
 		msg := ""
@@ -106,6 +121,41 @@ func summarizeGift(danmuLen int, minCost int) {
 		if sumCost >= 50000 { // 50元
 			PushToBulletSender(name + "老板大气大气")
 		}
-		delete(thanksGiver.giftTable, name)
+		delete(thanksGiver.giftNotBlindBoxTable, name)
+	}
+
+	//盲盒礼物
+	for name, m := range thanksGiver.giftBlindBoxTable {
+		giftstring := []string{}
+		msg := ""
+		for blindBoxName, blindBoxMap := range m {
+			giftstring = append(giftstring, fmt.Sprintf("%d个%s盈亏%+d元", blindBoxMap["count"], blindBoxName, blindBoxMap["profit_and_loss"]/1000))
+			// 计算打赏金额
+			// 感谢完后立刻清空map
+			delete(m, blindBoxName)
+		}
+
+		msgShort := ""
+
+		msg = "感谢" + name + "的"
+		for k, v := range giftstring {
+			if k == 0 {
+				msg += v
+				msgShort = v
+			} else {
+				msg += "，" + v
+				msgShort += "，" + v
+			}
+		}
+
+		ms := []rune(msg)
+
+		if len(ms) > danmuLen {
+			PushToBulletSender("感谢 " + name + " 的")
+			PushToBulletSender(msgShort)
+		} else {
+			PushToBulletSender(msg)
+		}
+		delete(thanksGiver.giftBlindBoxTable, name)
 	}
 }

@@ -40,12 +40,20 @@ type SendGiftText struct {
 			UID           int         `json:"uid"`
 			Uname         string      `json:"uname"`
 		} `json:"batch_combo_send"`
-		Beatid           string      `json:"beatId"`
-		BizSource        string      `json:"biz_source"`
-		BlindGift        interface{} `json:"blind_gift"`
-		BroadcastID      int         `json:"broadcast_id"`
-		CoinType         string      `json:"coin_type"`
-		ComboResourcesID int         `json:"combo_resources_id"`
+		Beatid    string `json:"beatId"`
+		BizSource string `json:"biz_source"`
+		BlindGift struct {
+			BlindGiftConfigId string      `json:"blind_gift_config_id"`
+			From              string      `json:"from"`
+			GiftAction        int         `json:"gift_action"`
+			GiftTipPrice      interface{} `json:"gift_tip_price"`
+			OriginalGiftId    int         `json:"original_gift_id"`
+			OriginalGiftName  string      `json:"original_gift_name"`
+			OriginalGiftPrice int         `json:"original_gift_price"`
+		} `json:"blind_gift"`
+		BroadcastID      int    `json:"broadcast_id"`
+		CoinType         string `json:"coin_type"`
+		ComboResourcesID int    `json:"combo_resources_id"`
 		ComboSend        struct {
 			Action     string      `json:"action"`
 			ComboID    string      `json:"combo_id"`
