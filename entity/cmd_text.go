@@ -24,12 +24,91 @@ type InteractWordText struct {
 }
 
 type SendGiftText struct {
+	Cmd  string `json:"cmd"`
 	Data struct {
-		Action   string `json:"action"`
-		GiftName string `json:"giftName"`
-		Uname    string `json:"uname"`
-		Price    int    `json:"price"`
-		Num      int    `json:"num"`
+		Action         string `json:"action"`
+		BatchComboID   string `json:"batch_combo_id"`
+		BatchComboSend struct {
+			Action        string      `json:"action"`
+			BatchComboID  string      `json:"batch_combo_id"`
+			BatchComboNum int         `json:"batch_combo_num"`
+			BlindGift     interface{} `json:"blind_gift"`
+			GiftID        int         `json:"gift_id"`
+			GiftName      string      `json:"gift_name"`
+			GiftNum       int         `json:"gift_num"`
+			SendMaster    interface{} `json:"send_master"`
+			UID           int         `json:"uid"`
+			Uname         string      `json:"uname"`
+		} `json:"batch_combo_send"`
+		Beatid           string      `json:"beatId"`
+		BizSource        string      `json:"biz_source"`
+		BlindGift        interface{} `json:"blind_gift"`
+		BroadcastID      int         `json:"broadcast_id"`
+		CoinType         string      `json:"coin_type"`
+		ComboResourcesID int         `json:"combo_resources_id"`
+		ComboSend        struct {
+			Action     string      `json:"action"`
+			ComboID    string      `json:"combo_id"`
+			ComboNum   int         `json:"combo_num"`
+			GiftID     int         `json:"gift_id"`
+			GiftName   string      `json:"gift_name"`
+			GiftNum    int         `json:"gift_num"`
+			SendMaster interface{} `json:"send_master"`
+			UID        int         `json:"uid"`
+			Uname      string      `json:"uname"`
+		} `json:"combo_send"`
+		ComboStayTime  int     `json:"combo_stay_time"`
+		ComboTotalCoin int     `json:"combo_total_coin"`
+		CritProb       int     `json:"crit_prob"`
+		Demarcation    int     `json:"demarcation"`
+		Dmscore        int     `json:"dmscore"`
+		Draw           int     `json:"draw"`
+		Effect         int     `json:"effect"`
+		EffectBlock    int     `json:"effect_block"`
+		Face           string  `json:"face"`
+		Giftid         int     `json:"giftId"`
+		GiftName       string  `json:"giftName"`
+		Gifttype       int     `json:"giftType"`
+		Gold           int     `json:"gold"`
+		GuardLevel     int     `json:"guard_level"`
+		IsFirst        bool    `json:"is_first"`
+		IsSpecialBatch int     `json:"is_special_batch"`
+		Magnification  float64 `json:"magnification"`
+		MedalInfo      struct {
+			AnchorRoomid     int    `json:"anchor_roomid"`
+			AnchorUname      string `json:"anchor_uname"`
+			GuardLevel       int    `json:"guard_level"`
+			IconID           int    `json:"icon_id"`
+			IsLighted        int    `json:"is_lighted"`
+			MedalColor       int    `json:"medal_color"`
+			MedalColorBorder int    `json:"medal_color_border"`
+			MedalColorEnd    int    `json:"medal_color_end"`
+			MedalColorStart  int    `json:"medal_color_start"`
+			MedalLevel       int    `json:"medal_level"`
+			MedalName        string `json:"medal_name"`
+			Special          string `json:"special"`
+			TargetID         int    `json:"target_id"`
+		} `json:"medal_info"`
+		NameColor         string      `json:"name_color"`
+		Num               int         `json:"num"`
+		OriginalGiftName  string      `json:"original_gift_name"`
+		Price             int         `json:"price"`
+		Rcost             int64       `json:"rcost"`
+		Remain            int         `json:"remain"`
+		Rnd               string      `json:"rnd"`
+		SendMaster        interface{} `json:"send_master"`
+		Silver            int         `json:"silver"`
+		Super             int         `json:"super"`
+		SuperBatchGiftNum int         `json:"super_batch_gift_num"`
+		SuperGiftNum      int         `json:"super_gift_num"`
+		SvgaBlock         int         `json:"svga_block"`
+		TagImage          string      `json:"tag_image"`
+		Tid               string      `json:"tid"`
+		Timestamp         int         `json:"timestamp"`
+		TopList           interface{} `json:"top_list"`
+		TotalCoin         int         `json:"total_coin"`
+		UID               int         `json:"uid"`
+		Uname             string      `json:"uname"`
 	} `json:"data"`
 }
 type PKProcessInfo struct {
