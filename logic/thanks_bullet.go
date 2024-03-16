@@ -129,7 +129,7 @@ func summarizeGift(danmuLen int, minCost int) {
 		giftstring := []string{}
 		msg := ""
 		for blindBoxName, blindBoxMap := range m {
-			giftstring = append(giftstring, fmt.Sprintf("%d个%s盈亏%+d元", blindBoxMap["count"], blindBoxName, blindBoxMap["profit_and_loss"]/1000))
+			giftstring = append(giftstring, fmt.Sprintf("%d个%s盈亏%+f元", blindBoxMap["count"], blindBoxName, float64(blindBoxMap["profit_and_loss"])/1000))
 			// 计算打赏金额
 			// 感谢完后立刻清空map
 			delete(m, blindBoxName)
