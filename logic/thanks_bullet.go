@@ -67,7 +67,7 @@ func ThanksGift(ctx context.Context, svcCtx *svc.ServiceContext) {
 				if _, ok := thanksGiver.giftBlindBoxTable[g.Data.Uname]; !ok {
 					thanksGiver.giftBlindBoxTable[g.Data.Uname] = make(map[string]map[string]int)
 				}
-				if _, ok := thanksGiver.giftBlindBoxTable[g.Data.Uname][g.Data.GiftName]; !ok {
+				if _, ok := thanksGiver.giftBlindBoxTable[g.Data.Uname][g.Data.BlindGift.OriginalGiftName]; !ok {
 					thanksGiver.giftBlindBoxTable[g.Data.Uname][g.Data.BlindGift.OriginalGiftName] = make(map[string]int)
 				}
 				thanksGiver.giftBlindBoxTable[g.Data.Uname][g.Data.BlindGift.OriginalGiftName]["count"] += g.Data.Num
