@@ -52,7 +52,7 @@ func StartDanmuLogic(ctx context.Context, svcCtx *svc.ServiceContext) {
 				}
 				// 抽签
 				if svcCtx.Config.DrawByLot {
-					go DodrawByLotProcess(danmumsg, from[1].(string) svcCtx) 
+					go DodrawByLotProcess(danmumsg, from[1].(string), svcCtx) 
 
 				}
 				// 主播指令控制
