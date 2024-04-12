@@ -47,6 +47,7 @@ type Config struct {
 	} `json:",optional"`
 	FocusDanmu           []string `json:",optional"`
 	PKNotice             bool     `json:",default=true"`
+	DrawLotsList         []string `json:",optional"`
 	WelcomeBlacklistWide []string `json:",optional"`
 	WelcomeBlacklist     []string `json:",optional"`
 	DrawByLot            bool     `json:",default=true"`
