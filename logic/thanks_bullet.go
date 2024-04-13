@@ -52,27 +52,27 @@ func ThanksGift(ctx context.Context, svcCtx *svc.ServiceContext) {
 			t.Reset(w)
 		case g = <-thanksGiver.giftChan:
 			thanksGiver.locked.Lock()
-			if g.Data.BlindGift.OriginalGiftName == "" {
-				//fmt.Printf("非盲盒: ")
-				if _, ok := thanksGiver.giftNotBlindBoxTable[g.Data.Uname]; !ok {
-					thanksGiver.giftNotBlindBoxTable[g.Data.Uname] = make(map[string]map[string]int)
-				}
-				if _, ok := thanksGiver.giftNotBlindBoxTable[g.Data.Uname][g.Data.GiftName]; !ok {
-					thanksGiver.giftNotBlindBoxTable[g.Data.Uname][g.Data.GiftName] = make(map[string]int)
-				}
-				thanksGiver.giftNotBlindBoxTable[g.Data.Uname][g.Data.GiftName]["cost"] += g.Data.Price
-				thanksGiver.giftNotBlindBoxTable[g.Data.Uname][g.Data.GiftName]["count"] += g.Data.Num
-			} else {
-				//fmt.Printf("盲盒: ")
-				if _, ok := thanksGiver.giftBlindBoxTable[g.Data.Uname]; !ok {
-					thanksGiver.giftBlindBoxTable[g.Data.Uname] = make(map[string]map[string]int)
-				}
-				if _, ok := thanksGiver.giftBlindBoxTable[g.Data.Uname][g.Data.BlindGift.OriginalGiftName]; !ok {
-					thanksGiver.giftBlindBoxTable[g.Data.Uname][g.Data.BlindGift.OriginalGiftName] = make(map[string]int)
-				}
-				thanksGiver.giftBlindBoxTable[g.Data.Uname][g.Data.BlindGift.OriginalGiftName]["count"] += g.Data.Num
-				thanksGiver.giftBlindBoxTable[g.Data.Uname][g.Data.BlindGift.OriginalGiftName]["profit_and_loss"] += g.Data.Price - g.Data.BlindGift.OriginalGiftPrice
+			if _, ok := thanksGiver.giftNotBlindBoxTable[g.Data.Uname]; !ok {
+				thanksGiver.giftNotBlindBoxTable[g.Data.Uname] = make(map[string]map[string]int)
 			}
+			if _, ok := thanksGiver.giftNotBlindBoxTable[g.Data.Uname][g.Data.GiftName]; !ok {
+				thanksGiver.giftNotBlindBoxTable[g.Data.Uname][g.Data.GiftName] = make(map[string]int)
+			}
+			thanksGiver.giftNotBlindBoxTable[g.Data.Uname][g.Data.GiftName]["cost"] += g.Data.Price
+			thanksGiver.giftNotBlindBoxTable[g.Data.Uname][g.Data.GiftName]["count"] += g.Data.Num
+			//if g.Data.BlindGift.OriginalGiftName == "" {
+			//	//fmt.Printf("非盲盒: ")
+			//} else {
+			//	//fmt.Printf("盲盒: ")
+			//	if _, ok := thanksGiver.giftBlindBoxTable[g.Data.Uname]; !ok {
+			//		thanksGiver.giftBlindBoxTable[g.Data.Uname] = make(map[string]map[string]int)
+			//	}
+			//	if _, ok := thanksGiver.giftBlindBoxTable[g.Data.Uname][g.Data.BlindGift.OriginalGiftName]; !ok {
+			//		thanksGiver.giftBlindBoxTable[g.Data.Uname][g.Data.BlindGift.OriginalGiftName] = make(map[string]int)
+			//	}
+			//	thanksGiver.giftBlindBoxTable[g.Data.Uname][g.Data.BlindGift.OriginalGiftName]["count"] += g.Data.Num
+			//	thanksGiver.giftBlindBoxTable[g.Data.Uname][g.Data.BlindGift.OriginalGiftName]["profit_and_loss"] += g.Data.Price - g.Data.BlindGift.OriginalGiftPrice
+			//}
 			thanksGiver.locked.Unlock()
 		}
 	}
