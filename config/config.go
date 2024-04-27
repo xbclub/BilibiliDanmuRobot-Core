@@ -59,4 +59,6 @@ type Config struct {
 	ShowBlockMsg     bool              `json:",default=true"`  // 禁言提醒开关
 	KeywordReply     bool              `json:",default=false"` //关键词回复开关
 	KeywordReplyList map[string]string `json:",optional"`      // 关键词回复列表
+	LotteryEnable    bool              `json:",default=true"`  // 抽奖开关
+	LotteryUrl       string            `json:",optional"`      // 抽奖地址
 }
