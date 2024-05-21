@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+
 	"github.com/xbclub/BilibiliDanmuRobot-Core/svc"
 
 	gogpt "github.com/sashabaranov/go-openai"
@@ -22,7 +23,7 @@ func RequestChatgptRobot(msg string, svcCtx *svc.ServiceContext) (string, error)
 		prompt += fmt.Sprintf(" 尽可能的在%v个字内回答", svcCtx.Config.DanmuLen)
 	}
 	req := gogpt.ChatCompletionRequest{
-		Model: gogpt.GPT3Dot5Turbo0613,
+		Model: svcCtx.Config.ChatGPT.Model, //gogpt.GPT3Dot5Turbo0613,
 		Messages: []gogpt.ChatCompletionMessage{
 			{
 				Role: gogpt.ChatMessageRoleAssistant,
