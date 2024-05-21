@@ -8,6 +8,7 @@ import (
 	"github.com/xbclub/BilibiliDanmuRobot-Core/svc"
 	"github.com/zeromicro/go-zero/core/logx"
 	"regexp"
+	"strconv"
 )
 
 var danmuHandler *DanmuLogic
@@ -55,12 +56,14 @@ func StartDanmuLogic(ctx context.Context, svcCtx *svc.ServiceContext) {
 					go DodrawByLotProcess(danmumsg, from[1].(string), svcCtx) 
 
 				}
-				// 主播指令控制
-				go DoCMDProcess(danmumsg, uid, svcCtx)
 				// 关键词回复
 				if svcCtx.Config.KeywordReply {
 					go KeywordReply(danmumsg, svcCtx)
 				}
+			}
+			if len(danmumsg) > 0 && uid == strconv.FormatInt(svcCtx.UserID, 10) {
+				// 主播指令控制
+				go DoCMDProcess(danmumsg, uid, svcCtx)
 			}
 			// 实时输出弹幕消息
 			logx.Infof("%v %s:%s", uid, from[1], danmumsg)

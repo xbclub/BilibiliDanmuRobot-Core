@@ -2,6 +2,7 @@ package handler
 
 import (
 	"encoding/json"
+
 	"github.com/xbclub/BilibiliDanmuRobot-Core/entity"
 	"github.com/xbclub/BilibiliDanmuRobot-Core/logic"
 )
@@ -13,6 +14,13 @@ func (w *wsHandler) thankGifts() {
 			send := &entity.SendGiftText{}
 			_ = json.Unmarshal([]byte(s), send)
 			logic.PushToGiftChan(send)
+		}
+	})
+	w.client.RegisterCustomEventHandler("GUARD_BUY", func(s string) {
+		if w.svc.Config.ThanksGift {
+			send := &entity.GuardBuyText{}
+			_ = json.Unmarshal([]byte(s), send)
+			logic.PushToGuardChan(send)
 		}
 	})
 }

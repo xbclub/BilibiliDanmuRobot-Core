@@ -14,15 +14,12 @@ import (
 )
 
 func (w *wsHandler) welcomeInteractWord() {
-	//limiter := rate.NewLimiter(1, w.svc.Config.WelcomeTimeLimiter)
 	w.client.RegisterCustomEventHandler("INTERACT_WORD", func(s string) {
 		interact := &entity.InteractWordText{}
 		_ = json.Unmarshal([]byte(s), interact)
 		// 1 进场 2 关注 3 分享
-		//if interact.Data.MsgType == 1 && limiter.AllowN(time.Now(), w.svc.Config.WelcomeTimeLimiter) {
 		if interact.Data.MsgType == 1 {
 			if v, ok := w.svc.Config.WelcomeString[fmt.Sprint(interact.Data.Uid)]; w.svc.Config.WelcomeSwitch && ok {
-				//logic.PushToBulletSender(v)
 				logic.PushToInterractChan(&logic.InterractData{
 					Uid: interact.Data.Uid,
 					Msg: v,
