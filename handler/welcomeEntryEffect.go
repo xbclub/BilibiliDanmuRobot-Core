@@ -40,10 +40,10 @@ func (w *wsHandler) welcomeEntryEffect() {
 
 			msg := ""
 			if len(level) > 0 {
-				msg = fmt.Sprintf("欢迎%s %s", level, entry.Data.Uinfo.Base.Name)
+				msg = fmt.Sprintf("%s %s", level, entry.Data.Uinfo.Base.Name)
 			} else if w.svc.Config.WelcomeHighWealthy {
 				if entry.Data.Uinfo.Wealth.Level >= w.svc.Config.WelcomeHighWealthyLevel {
-					msg = fmt.Sprintf("欢迎 %s", entry.Data.Uinfo.Base.Name)
+					msg = fmt.Sprintf("%s", entry.Data.Uinfo.Base.Name)
 				}
 			}
 
