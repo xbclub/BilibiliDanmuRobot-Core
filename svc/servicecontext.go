@@ -2,6 +2,7 @@ package svc
 
 import (
 	"fmt"
+
 	"github.com/glebarez/sqlite"
 	"github.com/xbclub/BilibiliDanmuRobot-Core/config"
 	"github.com/xbclub/BilibiliDanmuRobot-Core/model"
@@ -15,8 +16,9 @@ type ServiceContext struct {
 	SininModel    model.SingInModel
 	UserID        int64 //主播id
 	Autointerract struct {
-		EntryEffect  bool
-		InteractWord bool
+		EntryEffect        bool
+		WelcomeHighWealthy bool
+		InteractWord       bool
 	}
 	RobotID string //机器人uid
 }

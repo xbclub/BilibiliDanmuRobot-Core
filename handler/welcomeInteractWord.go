@@ -9,9 +9,12 @@ import (
 	"github.com/zeromicro/go-zero/core/logx"
 	"math/rand"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 )
+
+var random = rand.New(rand.NewSource(time.Now().UnixMilli()))
 
 func (w *wsHandler) welcomeInteractWord() {
 	w.client.RegisterCustomEventHandler("INTERACT_WORD", func(s string) {
@@ -19,6 +22,10 @@ func (w *wsHandler) welcomeInteractWord() {
 		_ = json.Unmarshal([]byte(s), interact)
 		// 1 进场 2 关注 3 分享
 		if interact.Data.MsgType == 1 {
+			if !w.svc.Config.InteractSelf && strconv.Itoa(int(interact.Data.Uid)) == w.svc.RobotID {
+				return
+			}
+
 			if v, ok := w.svc.Config.WelcomeString[fmt.Sprint(interact.Data.Uid)]; w.svc.Config.WelcomeSwitch && ok {
 				logic.PushToInterractChan(&logic.InterractData{
 					Uid: interact.Data.Uid,
@@ -55,27 +62,25 @@ func (w *wsHandler) welcomeInteractWord() {
 				}
 			}
 		} else if interact.Data.MsgType == 2 {
-			if w.svc.Config.InteractWord {
+			if w.svc.Config.ThanksFocus {
 				if len(interact.Data.Uname) == 0 {
 					return
 				}
 				msg := "感谢 " + shortName(interact.Data.Uname, 8, w.svc.Config.DanmuLen) + " 的关注!"
 				logic.PushToBulletSender(msg)
 				if w.svc.Config.FocusDanmu != nil && len(w.svc.Config.FocusDanmu) > 0 {
-					rand.Seed(time.Now().UnixMicro())
-					logic.PushToBulletSender(w.svc.Config.FocusDanmu[rand.Intn(len(w.svc.Config.FocusDanmu))])
+					logic.PushToBulletSender(w.svc.Config.FocusDanmu[random.Intn(len(w.svc.Config.FocusDanmu))])
 				}
 			}
 		} else if interact.Data.MsgType == 3 {
-			if w.svc.Config.InteractWord {
+			if w.svc.Config.ThanksShare {
 				if len(interact.Data.Uname) == 0 {
 					return
 				}
 				msg := "感谢 " + shortName(interact.Data.Uname, 8, w.svc.Config.DanmuLen) + " 的分享!"
 				logic.PushToBulletSender(msg)
 				if w.svc.Config.FocusDanmu != nil && len(w.svc.Config.FocusDanmu) > 0 {
-					rand.Seed(time.Now().UnixMicro())
-					logic.PushToBulletSender(w.svc.Config.FocusDanmu[rand.Intn(len(w.svc.Config.FocusDanmu))])
+					logic.PushToBulletSender(w.svc.Config.FocusDanmu[random.Intn(len(w.svc.Config.FocusDanmu))])
 				}
 			}
 		} else {
@@ -115,7 +120,6 @@ func handleInterractByTime(uid int64, uname string, svcCtx *svc.ServiceContext) 
 	// 晚上 - Evening / Night 20:00--00:00
 	// 午夜 - Midnight 00:00 -- 2:00
 	//s := []rune(uname)
-	rand.Seed(time.Now().UnixMicro())
 	r := "{user}"
 
 	if svcCtx.Config.InteractWordByTime &&
@@ -127,7 +131,7 @@ func handleInterractByTime(uid int64, uname string, svcCtx *svc.ServiceContext) 
 		for _, danmuCfg := range svcCtx.Config.WelcomeDanmuByTime {
 			if danmuCfg.Key == key {
 				if danmuCfg.Enabled && len(danmuCfg.Danmu) > 0 {
-					szWelcomOrig := danmuCfg.Danmu[rand.Intn(len(danmuCfg.Danmu))]
+					szWelcomOrig := danmuCfg.Danmu[random.Intn(len(danmuCfg.Danmu))]
 
 					welcome := strings.ReplaceAll(szWelcomOrig, r, shortName(uname, 3, svcCtx.Config.DanmuLen))
 					rWelcome := []rune(welcome)
@@ -151,7 +155,6 @@ func handleInterractByTime(uid int64, uname string, svcCtx *svc.ServiceContext) 
 }
 func handleInterract(uid int64, uname string, svcCtx *svc.ServiceContext) string {
 	s := []rune(uname)
-	rand.Seed(time.Now().UnixMicro())
 	r := "{user}"
 	if _, ook := svcCtx.OtherSideUid[uid]; ook {
 		szWelcom := "欢迎  过来串门~"
@@ -162,7 +165,7 @@ func handleInterract(uid int64, uname string, svcCtx *svc.ServiceContext) string
 			return "欢迎 " + uname + " 过来串门~"
 		}
 	} else {
-		szWelcomOrig := svcCtx.Config.WelcomeDanmu[rand.Intn(len(svcCtx.Config.WelcomeDanmu))]
+		szWelcomOrig := svcCtx.Config.WelcomeDanmu[random.Intn(len(svcCtx.Config.WelcomeDanmu))]
 
 		welcome := strings.ReplaceAll(szWelcomOrig, r, shortName(uname, 3, svcCtx.Config.DanmuLen))
 		rWelcome := []rune(welcome)

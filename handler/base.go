@@ -179,6 +179,8 @@ func (w *wsHandler) startLogic() {
 	w.pkBattleEnd()
 	// 禁言用户提醒
 	w.blockUser()
+	// 下播提醒
+	w.sayGoodbye()
 	logx.Info("pk提醒已开启")
 
 	logx.Info("弹幕处理已开启")
