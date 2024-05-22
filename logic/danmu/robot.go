@@ -39,7 +39,7 @@ func DoDanmuProcess(msg string, svcCtx *svc.ServiceContext) {
 		content = strings.TrimPrefix(msg, svcCtx.Config.TalkRobotCmd)
 	}
 	//如果发现弹幕在@我，那么调用机器人进行回复
-	if len(content) > 0 && msg != svcCtx.Config.EntryMsg {
+	if len(content) > 0 && len(svcCtx.Config.TalkRobotCmd) > 0 && msg != svcCtx.Config.EntryMsg {
 		logic.PushToBulletRobot(content)
 	}
 }
