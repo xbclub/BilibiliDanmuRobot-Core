@@ -59,6 +59,19 @@ type GuardBuyText struct {
 	} `json:"data"`
 }
 
+type CommonNoticeDanmaku struct {
+	Cmd  string `json:"cmd"`
+	Data struct {
+		ContentSegments []struct {
+			FontColor string `json:"font_color"`
+			Text      string `json:"text"`
+			Type      int    `json:"type"`
+		} `json:"content_segments"`
+		Dmscore   int   `json:"dmscore"`
+		Terminals []int `json:"terminals"`
+	} `json:"data"`
+}
+
 type SendGiftText struct {
 	Cmd  string `json:"cmd"`
 	Data struct {

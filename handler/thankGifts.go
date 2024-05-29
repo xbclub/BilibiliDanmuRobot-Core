@@ -2,6 +2,7 @@ package handler
 
 import (
 	"encoding/json"
+	"fmt"
 
 	"github.com/xbclub/BilibiliDanmuRobot-Core/entity"
 	"github.com/xbclub/BilibiliDanmuRobot-Core/logic"
@@ -21,6 +22,18 @@ func (w *wsHandler) thankGifts() {
 			send := &entity.GuardBuyText{}
 			_ = json.Unmarshal([]byte(s), send)
 			logic.PushToGuardChan(send)
+		}
+	})
+
+	w.client.RegisterCustomEventHandler("COMMON_NOTICE_DANMAKU", func(s string) {
+		if w.svc.Config.ThanksGift {
+			data := &entity.CommonNoticeDanmaku{}
+			_ = json.Unmarshal([]byte(s), data)
+			if len(data.Data.ContentSegments) == 5 &&
+				data.Data.ContentSegments[1].Text == "投喂" &&
+				data.Data.ContentSegments[2].Text == "大航海盲盒" {
+				logic.PushToBulletSender(fmt.Sprintf("感谢 %s 的 %s", data.Data.ContentSegments[0].Text, data.Data.ContentSegments[4].Text))
+			}
 		}
 	})
 }
