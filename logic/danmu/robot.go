@@ -18,7 +18,7 @@ func DoDanmuProcess(msg string, svcCtx *svc.ServiceContext) {
 	// @帮助 打出来关键词
 	if strings.Compare("@帮助", msg) == 0 {
 		s := fmt.Sprintf("发送带有 %s 的弹幕和我互动", svcCtx.Config.TalkRobotCmd)
-		logx.Info(s)
+
 		logic.PushToBulletSender(" ")
 		logic.PushToBulletSender(s)
 		logic.PushToBulletSender("发送 签到 即可签到")

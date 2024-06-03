@@ -43,7 +43,7 @@ func (w *wsHandler) welcomeEntryEffect() {
 				msg = fmt.Sprintf("%s %s", level, entry.Data.Uinfo.Base.Name)
 			} else if w.svc.Config.WelcomeHighWealthy {
 				if entry.Data.Uinfo.Wealth.Level >= w.svc.Config.WelcomeHighWealthyLevel {
-					msg = fmt.Sprintf("%s", entry.Data.Uinfo.Base.Name)
+					msg = entry.Data.Uinfo.Base.Name
 				}
 			}
 

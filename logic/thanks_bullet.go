@@ -59,18 +59,22 @@ func ThanksGift(ctx context.Context, svcCtx *svc.ServiceContext) {
 			t.Reset(w)
 		case g = <-thanksGiver.giftChan:
 			thanksGiver.locked.Lock()
-			if g.Data.BlindGift.OriginalGiftName == "" {
-				//fmt.Printf("非盲盒: ")
-				if _, ok := thanksGiver.giftNotBlindBoxTable[g.Data.Uname]; !ok {
-					thanksGiver.giftNotBlindBoxTable[g.Data.Uname] = make(map[string]map[string]int)
-				}
-				if _, ok := thanksGiver.giftNotBlindBoxTable[g.Data.Uname][g.Data.GiftName]; !ok {
-					thanksGiver.giftNotBlindBoxTable[g.Data.Uname][g.Data.GiftName] = make(map[string]int)
-				}
-				thanksGiver.giftNotBlindBoxTable[g.Data.Uname][g.Data.GiftName]["cost"] += g.Data.Price
-				thanksGiver.giftNotBlindBoxTable[g.Data.Uname][g.Data.GiftName]["count"] += g.Data.Num
-			} else {
-				fmt.Printf("盲盒: ")
+
+			giftName := g.Data.GiftName
+			if g.Data.BlindGift.OriginalGiftName != "" {
+				giftName = giftName + "(" + g.Data.BlindGift.OriginalGiftName + ")"
+			}
+			if _, ok := thanksGiver.giftNotBlindBoxTable[g.Data.Uname]; !ok {
+				thanksGiver.giftNotBlindBoxTable[g.Data.Uname] = make(map[string]map[string]int)
+			}
+			if _, ok := thanksGiver.giftNotBlindBoxTable[g.Data.Uname][giftName]; !ok {
+				thanksGiver.giftNotBlindBoxTable[g.Data.Uname][giftName] = make(map[string]int)
+			}
+			thanksGiver.giftNotBlindBoxTable[g.Data.Uname][giftName]["cost"] += g.Data.Price
+			thanksGiver.giftNotBlindBoxTable[g.Data.Uname][giftName]["count"] += g.Data.Num
+
+			if svcCtx.Config.BlindBoxProfitLossStat && g.Data.BlindGift.OriginalGiftName != "" {
+				//fmt.Printf("盲盒: ")
 				if t, ok := thanksGiver.giftBlindBoxTimer[g.Data.UID]; !ok || t == nil {
 					thanksGiver.giftBlindBoxTimer[g.Data.UID] = time.NewTimer(time.Duration(svcCtx.Config.ThanksGiftTimeout) * time.Second)
 					go func(t *time.Timer) {
@@ -157,7 +161,7 @@ func summarizeGift(danmuLen int, minCost int) {
 
 		msgShort := ""
 
-		msg = "感谢" + name + "的"
+		msg = name + "的"
 		for k, v := range giftstring {
 			if k == 0 {
 				msg += v

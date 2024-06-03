@@ -59,10 +59,11 @@ type Config struct {
 	WelcomeBlacklist        []string          `json:",optional"`      // 不欢迎黑名单精确匹配
 
 	// 答谢设置
-	ThanksGift            bool `json:",default=false"` // 感谢送礼
-	ThanksGiftTimeout     int  `json:",default=3"`     // 礼物统计时间
-	ThanksBlindBoxTimeout int  `json:",default=6"`     // 盲盒统计时间
-	ThanksMinCost         int  `json:",default=0"`     // 最小感谢礼物价值
+	ThanksGift             bool `json:",default=false"` // 感谢送礼
+	ThanksGiftTimeout      int  `json:",default=3"`     // 礼物统计时间
+	ThanksBlindBoxTimeout  int  `json:",default=6"`     // 盲盒统计时间
+	ThanksMinCost          int  `json:",default=0"`     // 最小感谢礼物价值
+	BlindBoxProfitLossStat bool `json:",default=true"`  // 盲盒盈亏统计
 
 	// 定时弹幕配置
 	CronDanmu bool `json:",default=false"` // 定时弹幕开关
