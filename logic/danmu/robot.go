@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"github.com/xbclub/BilibiliDanmuRobot-Core/logic"
 	"github.com/xbclub/BilibiliDanmuRobot-Core/svc"
-	"github.com/zeromicro/go-zero/core/logx"
 	"strings"
 )
 
