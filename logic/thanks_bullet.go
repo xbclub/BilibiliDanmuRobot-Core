@@ -122,7 +122,7 @@ func summarizeBlindGift(danmuLen int, minCost int) {
 
 		msgShort := ""
 
-		msg = "感谢" + name + "的"
+		msg = name + "的"
 		for k, v := range giftstring {
 			if k == 0 {
 				msg += v
@@ -136,7 +136,7 @@ func summarizeBlindGift(danmuLen int, minCost int) {
 		ms := []rune(msg)
 
 		if len(ms) > danmuLen {
-			PushToBulletSender("感谢 " + name + " 的")
+			PushToBulletSender(name + " 的")
 			PushToBulletSender(msgShort)
 		} else {
 			PushToBulletSender(msg)
@@ -161,7 +161,7 @@ func summarizeGift(danmuLen int, minCost int) {
 
 		msgShort := ""
 
-		msg = name + "的"
+		msg = "感谢" + name + "的"
 		for k, v := range giftstring {
 			if k == 0 {
 				msg += v
