@@ -8,7 +8,6 @@ import (
 	"github.com/xbclub/BilibiliDanmuRobot-Core/svc"
 	"github.com/zeromicro/go-zero/core/logx"
 	"math/rand"
-	"regexp"
 	"strings"
 	"time"
 )
@@ -26,10 +25,36 @@ func (w *wsHandler) welcomeEntryEffect() {
 			})
 		} else if w.svc.Config.EntryEffect {
 			logx.Info("特效欢迎")
-			logic.PushToInterractChan(&logic.InterractData{
-				Uid: entry.Data.Uid,
-				Msg: getRandomWelcome(entry.Data.CopyWriting, w.svc),
-			})
+
+			level := ""
+			switch entry.Data.Uinfo.Guard.Level {
+			case 1:
+				level = "总督"
+			case 2:
+				level = "提督"
+			case 3:
+				level = "舰长"
+			default:
+				level = ""
+			}
+
+			msg := ""
+			if len(level) > 0 {
+				msg = fmt.Sprintf("%s %s", level, entry.Data.Uinfo.Base.Name)
+			} else if w.svc.Config.WelcomeHighWealthy {
+				if entry.Data.Uinfo.Wealth.Level >= w.svc.Config.WelcomeHighWealthyLevel {
+					msg = entry.Data.Uinfo.Base.Name
+				}
+			}
+
+			logx.Info(msg)
+
+			if len(msg) > 0 {
+				logic.PushToInterractChan(&logic.InterractData{
+					Uid: entry.Data.Uid,
+					Msg: getRandomWelcome(msg, w.svc),
+				})
+			}
 		}
 	})
 }
@@ -70,7 +95,7 @@ func getRandomDanmuKeyByTime() (key string) {
 }
 func getRandomWelcome(msg string, svcCtx *svc.ServiceContext) string {
 	s := ""
-	content := ""
+	content := msg
 	if svcCtx.Config.InteractWordByTime &&
 		svcCtx.Config.WelcomeDanmuByTime != nil &&
 		len(svcCtx.Config.WelcomeDanmuByTime) > 0 {
@@ -94,19 +119,19 @@ func getRandomWelcome(msg string, svcCtx *svc.ServiceContext) string {
 		s = svcCtx.Config.WelcomeDanmu[rand.Intn(len(svcCtx.Config.WelcomeDanmu))]
 	}
 
-	// 定义正则表达式
-	re := regexp.MustCompile(`<%(.*?)%>`)
+	// // 定义正则表达式
+	// re := regexp.MustCompile(`<%(.*?)%>`)
 
-	// 提取匹配的部分
-	matches := re.FindAllStringSubmatch(msg, -1)
-	// 遍历匹配结果
-	for _, match := range matches {
-		content = match[1]
-		break
-	}
-	if strings.Contains(msg, "舰长") {
-		content = "舰长 " + content
-	}
+	// // 提取匹配的部分
+	// matches := re.FindAllStringSubmatch(msg, -1)
+	// // 遍历匹配结果
+	// for _, match := range matches {
+	// 	content = match[1]
+	// 	break
+	// }
+	// if strings.Contains(msg, "舰长") {
+	// 	content = "舰长 " + content
+	// }
 	r := "{user}"
 	s = strings.ReplaceAll(s, r+", ", r+"\n")
 	s = strings.ReplaceAll(s, r+",", r+"\n")

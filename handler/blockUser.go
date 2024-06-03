@@ -21,12 +21,19 @@ func (w *wsHandler) blockUser() {
 				return
 			}
 			op := ""
+			oper := ""
+			// FIXME: 抓包量少, 还需要更多测试
+			// 2 主播禁言 1 管理员禁言
 			if info.Data.Operator == 2 {
-				op = "解开禁言"
-			} else {
+				oper = "主播"
 				op = "禁言"
+			} else if info.Data.Operator == 1 {
+				oper = "房管"
+				op = "禁言"
+			} else { // FIXME: 没有抓到数据 待定
+				op = "解开禁言"
 			}
-			s := fmt.Sprintf("用户 %s 被管理员 %s!", info.Data.UName, op)
+			s := fmt.Sprintf("用户 %s 被%s %s!", info.Data.UName, oper, op)
 			logic.PushToBulletSender(s)
 		}
 	})

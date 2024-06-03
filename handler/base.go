@@ -108,6 +108,7 @@ func NewWsHandler() WsHandler {
 type WsHandler interface {
 	StartWsClient() error
 	StopWsClient()
+	SayGoodbye()
 	starthttp() error
 }
 
@@ -147,6 +148,14 @@ func (w *wsHandler) StopWsClient() {
 	w.client.Stop()
 	//w.svc.Db.Db.Close()
 }
+func (w *wsHandler) SayGoodbye() {
+	if len(w.svc.Config.GoodbyeInfo) > 0 {
+		err := http.Send(w.svc.Config.GoodbyeInfo, w.svc)
+		if err != nil {
+			logx.Error(err)
+		}
+	}
+}
 func (w *wsHandler) startLogic() {
 	w.sendBulletCtx, w.sendBulletCancel = context.WithCancel(context.Background())
 	go logic.StartSendBullet(w.sendBulletCtx, w.svc)
@@ -179,6 +188,8 @@ func (w *wsHandler) startLogic() {
 	w.pkBattleEnd()
 	// 禁言用户提醒
 	w.blockUser()
+	// 下播提醒
+	// w.sayGoodbyeByWs()
 	logx.Info("pk提醒已开启")
 
 	logx.Info("弹幕处理已开启")

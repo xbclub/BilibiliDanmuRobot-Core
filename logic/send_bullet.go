@@ -20,7 +20,6 @@ func PushToBulletSender(bullet string) {
 }
 
 func StartSendBullet(ctx context.Context, svcCtx *svc.ServiceContext) {
-	var err error
 
 	sender = &BulletSender{
 		bulletChan: make(chan string, 1000),
@@ -49,7 +48,7 @@ func StartSendBullet(ctx context.Context, svcCtx *svc.ServiceContext) {
 				msgdata = append(msgdata, string(msgrun[(m-1)*danmuLen:danmuLen*m]))
 			}
 			for _, msgs := range msgdata {
-				if err = http.Send(msgs, svcCtx); err != nil {
+				if err := http.Send(msgs, svcCtx); err != nil {
 					logx.Errorf("弹幕发送失败：%s msg: %s", err, msgs)
 				} else {
 					logx.Infof("弹幕发送成功：%s", msgs)
