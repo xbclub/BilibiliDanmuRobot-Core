@@ -26,7 +26,7 @@ type Config struct {
 	// AI聊天相关
 	TalkRobotCmd  string   `json:",default=test"`                                // 机器人聊天关键字
 	FuzzyMatchCmd bool     `json:",default=false"`                               // 模糊匹配关键字
-	RobotName     string   `json:",default=花花"`                                 // 机器人名称
+	RobotName     string   `json:",default=花花"`                                  // 机器人名称
 	RobotMode     string   `json:",default=QingYunKe,options=QingYunKe|ChatGPT"` // 机器人服务
 	ChatGPT       struct { // GPT的配置
 		APIUrl   string `json:",default=https://api.openai.com/v1"`
@@ -75,8 +75,10 @@ type Config struct {
 	} `json:",optional"`
 
 	// 抽签设置
-	DrawByLot    bool     `json:",default=true"` // 抽签开关
-	DrawLotsList []string `json:",optional"`     // 抽签话术列表
+	// 抽签开关
+	DrawByLot bool `json:",default=true"`
+	// 抽签话术列表
+	DrawLotsList []string `json:",optional,default=['恭喜您抽到吉签，好运常伴，心想事成！','恭喜您获得上上签，一帆风顺，万事如意！','喜获佳签，吉星高照，未来可期！','抽到福签，福运亨通，好事连连！','吉签在手，好运相随，笑口常开！','恭喜您抽中好签，好运不断，步步高升！','喜得吉签，好运自来，前程似锦！','抽到吉签啦，事事顺心，幸福安康！','恭喜您抽中如意签，心想事成，万事如意！','喜获吉祥签，好运连连，快乐无边！','抽到小凶签，近期小心行事。','遗憾，下签，请保持警惕。','不吉之签，需谨慎处理。','抽到凶签，冷静应对挑战。','抽到稍逊签，行事需谨慎。','抽到小凶签，请留意周围事物。','抽到下签，调整心态面对。','运势不佳，努力克服困难。','抽到下下签，但也请信心面对未来。','我是签，抽我抽我']"` // 抽签话术列表
 
 	// 签到设置
 	SignInEnable bool   `json:",default=true"` // 签到
