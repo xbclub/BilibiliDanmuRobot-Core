@@ -73,9 +73,9 @@ func GetUserInfo() (userinfo *entity.UserinfoLite) {
 	}
 	if r.Code == -412 {
 		logx.Info("request was banned")
-		return userinfo
+		//return userinfo
 	}
-	logx.Error(r)
+	//logx.Error(r)
 	if resp, err = cli.R().
 		SetHeader("user-agent", userAgent).
 		SetHeader("cookie", CookieStr).
