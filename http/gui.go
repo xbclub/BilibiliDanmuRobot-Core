@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
-	"fmt"
 	"github.com/avast/retry-go/v4"
 	"github.com/go-resty/resty/v2"
 	"github.com/xbclub/BilibiliDanmuRobot-Core/entity"
@@ -53,7 +52,6 @@ func GetUserInfo() (userinfo *entity.UserinfoLite) {
 	userinfo = new(entity.UserinfoLite)
 	var err error
 	r := &entity.UserInfo{}
-	fmt.Println(CookieStr)
 	err = retry.Do(func() error {
 		if resp, err = getUserInfoByGOZero(); err != nil {
 			return err
