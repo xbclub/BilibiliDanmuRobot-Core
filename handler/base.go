@@ -50,29 +50,10 @@ type wsHandler struct {
 }
 
 func NewWsHandler() WsHandler {
-	dir := "./token"
-	if _, err := os.Stat(dir); os.IsNotExist(err) {
-		// Directory does not exist, create it
-		err = os.Mkdir(dir, 0755)
-		if err != nil {
-			panic(fmt.Sprintf("无法创建token文件夹 请手动创建:%s", err))
-		}
+	ctx, err := mustloadConfig()
+	if err != nil {
+		return nil
 	}
-
-	var c config.Config
-	conf.MustLoad("etc/bilidanmaku-api.yaml", &c, conf.UseEnv())
-	logx.MustSetup(c.Log)
-	logx.DisableStat()
-	//配置数据库文件夹
-	info, err := os.Stat(c.DBPath)
-	if os.IsNotExist(err) || !info.IsDir() {
-		err = os.MkdirAll(c.DBPath, 0777)
-		if err != nil {
-			logx.Errorf("文件夹创建失败：%s", c.DBPath)
-			return nil
-		}
-	}
-	ctx := svc.NewServiceContext(c)
 	ws := new(wsHandler)
 	err = ws.starthttp()
 	if err != nil {
@@ -96,13 +77,52 @@ func NewWsHandler() WsHandler {
 	}
 	ws.userId, err = strconv.Atoi(strUserId)
 	ctx.RobotID = strUserId
-	roominfo, err := http.RoomInit(c.RoomId)
+	roominfo, err := http.RoomInit(ctx.Config.RoomId)
 	if err != nil {
-		logx.Error()
+		logx.Error(err)
 		//return nil
 	}
 	ctx.UserID = roominfo.Data.Uid
 	return ws
+}
+func (w *wsHandler) ReloadConfig() error {
+	ctx, err := mustloadConfig()
+	w.svc = ctx
+	if err != nil {
+		return err
+	}
+	if ctx.Config.RoomId != w.svc.Config.RoomId {
+		ws := new(wsHandler)
+		err = ws.starthttp()
+		if err != nil {
+			logx.Error(err)
+			return err
+		}
+		ws.client = client.NewClient(ctx.Config.RoomId)
+		ws.client.SetCookie(http.CookieStr)
+		ws.svc = ctx
+		//初始化定时弹幕
+		ws.corndanmu = cron.New(cron.WithParser(cron.NewParser(
+			cron.SecondOptional | cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.Dow,
+		)))
+		ws.mapCronDanmuSendIdx = make(map[int]int)
+
+		// 设置uid作为基本配置
+		strUserId, ok := http.CookieList["DedeUserID"]
+		if !ok {
+			logx.Infof("uid加载失败，请重新登录")
+			return errors.New("uid加载失败，请重新登录")
+		}
+		ws.userId, err = strconv.Atoi(strUserId)
+		ctx.RobotID = strUserId
+		roominfo, err := http.RoomInit(ctx.Config.RoomId)
+		if err != nil {
+			logx.Error(err)
+			return err
+		}
+		ctx.UserID = roominfo.Data.Uid
+	}
+	return nil
 }
 
 type WsHandler interface {
@@ -110,6 +130,7 @@ type WsHandler interface {
 	StopWsClient()
 	SayGoodbye()
 	starthttp() error
+	ReloadConfig() error
 }
 
 func (w *wsHandler) StartWsClient() error {
@@ -268,4 +289,30 @@ func (w *wsHandler) corndanmuStart() {
 		}
 	}
 	w.corndanmu.Start()
+}
+func mustloadConfig() (*svc.ServiceContext, error) {
+	dir := "./token"
+	if _, err := os.Stat(dir); os.IsNotExist(err) {
+		// Directory does not exist, create it
+		err = os.Mkdir(dir, 0755)
+		if err != nil {
+			panic(fmt.Sprintf("无法创建token文件夹 请手动创建:%s", err))
+		}
+	}
+
+	var c config.Config
+	conf.MustLoad("etc/bilidanmaku-api.yaml", &c, conf.UseEnv())
+	logx.MustSetup(c.Log)
+	logx.DisableStat()
+	//配置数据库文件夹
+	info, err := os.Stat(c.DBPath)
+	if os.IsNotExist(err) || !info.IsDir() {
+		err = os.MkdirAll(c.DBPath, 0777)
+		if err != nil {
+			logx.Errorf("文件夹创建失败：%s", c.DBPath)
+			return nil, err
+		}
+	}
+	ctx := svc.NewServiceContext(c)
+	return ctx, err
 }
