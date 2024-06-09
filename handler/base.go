@@ -85,44 +85,34 @@ func NewWsHandler() WsHandler {
 	ctx.UserID = roominfo.Data.Uid
 	return ws
 }
-func (w *wsHandler) ReloadConfig() error {
+func (ws *wsHandler) ReloadConfig() error {
 	ctx, err := mustloadConfig()
 
 	if err != nil {
 		return err
 	}
-	w.svc = ctx
-	if ctx.Config.RoomId != w.svc.Config.RoomId {
-		ws := new(wsHandler)
-		err = ws.starthttp()
-		if err != nil {
-			logx.Error(err)
-			return err
-		}
+	fmt.Println(ctx.Config.RoomId, ws.svc.Config.RoomId)
+	if ctx.Config.RoomId != ws.svc.Config.RoomId {
+		logx.Infof("房间号更改，更换房间号 ：%v", ctx.Config.RoomId)
+		ws.client.Stop()
+		ws.svc.Config = ctx.Config
 		ws.client = client.NewClient(ctx.Config.RoomId)
 		ws.client.SetCookie(http.CookieStr)
-		ws.svc = ctx
-		//初始化定时弹幕
-		ws.corndanmu = cron.New(cron.WithParser(cron.NewParser(
-			cron.SecondOptional | cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.Dow,
-		)))
-		ws.mapCronDanmuSendIdx = make(map[int]int)
-
-		// 设置uid作为基本配置
-		strUserId, ok := http.CookieList["DedeUserID"]
-		if !ok {
-			logx.Infof("uid加载失败，请重新登录")
-			return errors.New("uid加载失败，请重新登录")
-		}
-		ws.userId, err = strconv.Atoi(strUserId)
-		ctx.RobotID = strUserId
 		roominfo, err := http.RoomInit(ctx.Config.RoomId)
 		if err != nil {
 			logx.Error(err)
 			//return err
 		}
 		ctx.UserID = roominfo.Data.Uid
+		err = ws.client.Start()
+		if err != nil {
+			return err
+		}
+		ws.registerHandler()
+	} else {
+		ws.svc.Config = ctx.Config
 	}
+
 	return nil
 }
 
@@ -132,6 +122,7 @@ type WsHandler interface {
 	SayGoodbye()
 	starthttp() error
 	ReloadConfig() error
+	GetSvc() svc.ServiceContext
 }
 
 func (w *wsHandler) StartWsClient() error {
@@ -143,6 +134,9 @@ func (w *wsHandler) StartWsClient() error {
 		}
 	}
 	return w.client.Start()
+}
+func (w *wsHandler) GetSvc() svc.ServiceContext {
+	return *w.svc
 }
 func (w *wsHandler) StopWsClient() {
 	if w.sendBulletCancel != nil {
@@ -188,36 +182,44 @@ func (w *wsHandler) startLogic() {
 	// 弹幕逻辑
 	w.danmuLogicCtx, w.danmuLogicCancel = context.WithCancel(context.Background())
 	go danmu.StartDanmuLogic(w.danmuLogicCtx, w.svc)
-	w.receiveDanmu()
+
 	logx.Info("弹幕机器人已开启")
 	// 特效欢迎
 	w.ineterractCtx, w.ineterractCancel = context.WithCancel(context.Background())
 	go logic.Interact(w.ineterractCtx)
-	w.welcomeEntryEffect()
-	w.welcomeInteractWord()
+
 	logx.Info("欢迎模块已开启")
-	// 天选自动关闭欢迎
-	w.anchorLot()
+
 	// 礼物感谢
 	w.thanksGiftCtx, w.thankGiftCancel = context.WithCancel(context.Background())
 	go logic.ThanksGift(w.thanksGiftCtx, w.svc)
-	w.thankGifts()
+
 	logx.Info("礼物感谢已开启")
 	// pk提醒
 	w.pkCtx, w.pkCancel = context.WithCancel(context.Background())
 	go logic.PK(w.pkCtx, w.svc)
+
+	// 下播提醒
+	// w.sayGoodbyeByWs()
+
+	//定时弹幕
+	w.corndanmuStart()
+
+	w.registerHandler()
+}
+func (w *wsHandler) registerHandler() {
+	w.welcomeEntryEffect()
+	w.welcomeInteractWord()
+	logx.Info("弹幕处理已开启")
+	w.receiveDanmu()
+	// 天选自动关闭欢迎
+	w.anchorLot()
+	logx.Info("pk提醒已开启")
 	w.pkBattleStart()
 	w.pkBattleEnd()
 	// 禁言用户提醒
 	w.blockUser()
-	// 下播提醒
-	// w.sayGoodbyeByWs()
-	logx.Info("pk提醒已开启")
-
-	logx.Info("弹幕处理已开启")
-	//定时弹幕
-	w.corndanmuStart()
-
+	w.thankGifts()
 }
 func (w *wsHandler) starthttp() error {
 	var err error
