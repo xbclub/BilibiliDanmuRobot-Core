@@ -51,7 +51,8 @@ func GetUserInfo() (userinfo *entity.UserinfoLite) {
 	err = retry.Do(func() error {
 		if resp, err = cli.R().
 			SetHeader("user-agent", userAgent).
-			SetHeader("cookie", CookieStr).
+			SetHeader("Referer", "https://live.bilibili.com/").
+			SetHeader("cookie", CookieStr+";bili_ticket=eyJhbGciOiJIUzI1NiIsImtpZCI6InMwMyIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3MTgxNjA5NTEsImlhdCI6MTcxNzkwMTY5MSwicGx0IjotMX0.bRve71UaM2ITbRPa3cJ_7EyP-Y5bCwhRUgwOh5B7mu4; bili_ticket_expires=1718160891;").
 			Get(url); err != nil {
 			return err
 		}
@@ -70,6 +71,11 @@ func GetUserInfo() (userinfo *entity.UserinfoLite) {
 		logx.Info("用户未登录")
 		return userinfo
 	}
+	if r.Code == -412 {
+		logx.Info("request was banned")
+		return userinfo
+	}
+	logx.Error(r)
 	if resp, err = cli.R().
 		SetHeader("user-agent", userAgent).
 		SetHeader("cookie", CookieStr).

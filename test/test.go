@@ -30,6 +30,7 @@ func main() {
 	WriteConfig(string(marshal))
 	cls.ReloadConfig()
 	fmt.Println(cls.GetSvc().Config.RoomId)
+	fmt.Println(cls.GetUserinfo())
 	time.Sleep(20 * time.Second)
 	z.SignInEnable = true
 	marshal, err = json.Marshal(z)

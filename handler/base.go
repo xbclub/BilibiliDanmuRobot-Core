@@ -19,6 +19,7 @@ import (
 	"github.com/zeromicro/go-zero/core/logx"
 	"math/rand"
 	"os"
+	"reflect"
 	"strconv"
 )
 
@@ -91,7 +92,6 @@ func (ws *wsHandler) ReloadConfig() error {
 	if err != nil {
 		return err
 	}
-	fmt.Println(ctx.Config.RoomId, ws.svc.Config.RoomId)
 	if ctx.Config.RoomId != ws.svc.Config.RoomId {
 		logx.Infof("房间号更改，更换房间号 ：%v", ctx.Config.RoomId)
 		ws.client.Stop()
@@ -110,7 +110,16 @@ func (ws *wsHandler) ReloadConfig() error {
 		}
 		ws.registerHandler()
 	} else {
-		ws.svc.Config = ctx.Config
+		if ctx.Config.CronDanmu != ws.svc.Config.CronDanmu || !areSlicesEqual(ctx.Config.CronDanmuList, ws.svc.Config.CronDanmuList) {
+			logx.Info("识别到定时弹幕配置发生变化，重新加载")
+			ws.svc.Config = ctx.Config
+			for _, i := range ws.corndanmu.Entries() {
+				ws.corndanmu.Remove(i.ID)
+			}
+			ws.corndanmuStart()
+		} else {
+			ws.svc.Config = ctx.Config
+		}
 	}
 
 	return nil
@@ -123,6 +132,7 @@ type WsHandler interface {
 	starthttp() error
 	ReloadConfig() error
 	GetSvc() svc.ServiceContext
+	GetUserinfo() *entity.UserinfoLite
 }
 
 func (w *wsHandler) StartWsClient() error {
@@ -134,6 +144,9 @@ func (w *wsHandler) StartWsClient() error {
 		}
 	}
 	return w.client.Start()
+}
+func (w *wsHandler) GetUserinfo() *entity.UserinfoLite {
+	return http.GetUserInfo()
 }
 func (w *wsHandler) GetSvc() svc.ServiceContext {
 	return *w.svc
@@ -318,4 +331,19 @@ func mustloadConfig() (*svc.ServiceContext, error) {
 	}
 	ctx := svc.NewServiceContext(c)
 	return ctx, err
+}
+
+// 比较两个 Person 切片是否相同
+func areSlicesEqual(a, b []config.CronDanmuList) bool {
+	if len(a) != len(b) {
+		return false
+	}
+
+	for i := range a {
+		if !reflect.DeepEqual(a[i], b[i]) {
+			return false
+		}
+	}
+
+	return true
 }

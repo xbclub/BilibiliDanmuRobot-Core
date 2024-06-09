@@ -68,11 +68,7 @@ type Config struct {
 	// 定时弹幕配置
 	CronDanmu bool `json:",default=false"` // 定时弹幕开关
 	// CronSupportSec bool `json:",default=false"`
-	CronDanmuList []struct { // 定时弹幕配置列表
-		Cron   string   `json:",optional"`      // 定时表达式
-		Random bool     `json:",default=false"` // 是否随机发送
-		Danmu  []string `json:",optional"`      // 内容列表
-	} `json:",optional"`
+	CronDanmuList []CronDanmuList `json:",optional"` // 定时弹幕列表
 
 	// 抽签设置
 	// 抽签开关
@@ -91,4 +87,9 @@ type Config struct {
 	// 抽奖设置
 	LotteryEnable bool   `json:",default=true"` // 抽奖开关
 	LotteryUrl    string `json:",optional"`     // 抽奖地址
+}
+type CronDanmuList struct {
+	Cron   string   `json:",optional"`      // 定时表达式
+	Random bool     `json:",default=false"` // 是否随机发送
+	Danmu  []string `json:",optional"`
 }
