@@ -88,14 +88,14 @@ func NewWsHandler() WsHandler {
 }
 func (ws *wsHandler) ReloadConfig() error {
 	ctx, err := mustloadConfig()
-
+	oldconfig := *ws.svc.Config
 	if err != nil {
 		return err
 	}
-	if ctx.Config.RoomId != ws.svc.Config.RoomId {
+	ws.svc.Config = ctx.Config
+	if ctx.Config.RoomId != oldconfig.RoomId {
 		logx.Infof("房间号更改，更换房间号 ：%v", ctx.Config.RoomId)
 		ws.client.Stop()
-		ws.svc.Config = ctx.Config
 		ws.client = client.NewClient(ctx.Config.RoomId)
 		ws.client.SetCookie(http.CookieStr)
 		roominfo, err := http.RoomInit(ctx.Config.RoomId)
@@ -109,19 +109,14 @@ func (ws *wsHandler) ReloadConfig() error {
 			return err
 		}
 		ws.registerHandler()
-	} else {
-		if ctx.Config.CronDanmu != ws.svc.Config.CronDanmu || !areSlicesEqual(ctx.Config.CronDanmuList, ws.svc.Config.CronDanmuList) {
-			logx.Info("识别到定时弹幕配置发生变化，重新加载")
-			ws.svc.Config = ctx.Config
-			for _, i := range ws.corndanmu.Entries() {
-				ws.corndanmu.Remove(i.ID)
-			}
-			ws.corndanmuStart()
-		} else {
-			ws.svc.Config = ctx.Config
-		}
 	}
-
+	if ctx.Config.CronDanmu != oldconfig.CronDanmu || !areSlicesEqual(ctx.Config.CronDanmuList, oldconfig.CronDanmuList) {
+		logx.Info("识别到定时弹幕配置发生变化，重新加载")
+		for _, i := range ws.corndanmu.Entries() {
+			ws.corndanmu.Remove(i.ID)
+		}
+		ws.corndanmuStart()
+	}
 	return nil
 }
 

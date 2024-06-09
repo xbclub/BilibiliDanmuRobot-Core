@@ -23,6 +23,8 @@ func main() {
 	x := cls.GetSvc()
 	z := *x.Config
 	z.SignInEnable = false
+	z.RoomId = 4699397
+	z.CronDanmu = false
 	marshal, err := json.Marshal(z)
 	if err != nil {
 		return
