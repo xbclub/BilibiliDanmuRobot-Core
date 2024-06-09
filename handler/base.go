@@ -118,7 +118,7 @@ func (w *wsHandler) ReloadConfig() error {
 		roominfo, err := http.RoomInit(ctx.Config.RoomId)
 		if err != nil {
 			logx.Error(err)
-			return err
+			//return err
 		}
 		ctx.UserID = roominfo.Data.Uid
 	}
