@@ -87,10 +87,11 @@ func NewWsHandler() WsHandler {
 }
 func (w *wsHandler) ReloadConfig() error {
 	ctx, err := mustloadConfig()
-	w.svc = ctx
+
 	if err != nil {
 		return err
 	}
+	w.svc = ctx
 	if ctx.Config.RoomId != w.svc.Config.RoomId {
 		ws := new(wsHandler)
 		err = ws.starthttp()
