@@ -19,7 +19,9 @@ func main() {
 	} else {
 		fmt.Println("cls is nil")
 	}
-	fmt.Println(cls.GetSvc().Config.RoomId)
+	fmt.Println(cls.GetUserinfo())
+
+	//http.HttpTest()
 	x := cls.GetSvc()
 	z := *x.Config
 	z.SignInEnable = false
@@ -32,7 +34,7 @@ func main() {
 	WriteConfig(string(marshal))
 	cls.ReloadConfig()
 	fmt.Println(cls.GetSvc().Config.RoomId)
-	fmt.Println(cls.GetUserinfo())
+	//fmt.Println(cls.GetUserinfo())
 	time.Sleep(20 * time.Second)
 	z.SignInEnable = true
 	marshal, err = json.Marshal(z)
