@@ -25,6 +25,9 @@ func (w *wsHandler) welcomeInteractWord() {
 			if !w.svc.Config.InteractSelf && strconv.Itoa(int(interact.Data.Uid)) == w.svc.RobotID {
 				return
 			}
+			if !w.svc.Config.InteractAnchor && interact.Data.Uid == w.svc.UserID {
+				return
+			}
 
 			if v, ok := w.svc.Config.WelcomeString[fmt.Sprint(interact.Data.Uid)]; w.svc.Config.WelcomeSwitch && ok {
 				logic.PushToInterractChan(&logic.InterractData{

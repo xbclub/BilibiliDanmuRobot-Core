@@ -52,6 +52,7 @@ type Config struct {
 	ThanksFocus             bool              `json:",default=false"` // 关注感谢开关
 	ThanksShare             bool              `json:",default=false"` // 分享感谢开关
 	InteractSelf            bool              `json:",default=true"`  // 欢迎自己
+	InteractAnchor          bool              `json:",default=true"`  // 欢迎主播
 	FocusDanmu              []string          `json:",optional"`      // 关注的感谢列表
 	WelcomeSwitch           bool              `json:",default=false"` // 指定欢迎开关
 	WelcomeString           map[string]string `json:",optional"`      // 指定欢迎配置列表
