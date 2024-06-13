@@ -19,6 +19,7 @@ import (
 	"github.com/zeromicro/go-zero/core/logx"
 	"math/rand"
 	"os"
+	"reflect"
 	"strconv"
 )
 
@@ -50,29 +51,10 @@ type wsHandler struct {
 }
 
 func NewWsHandler() WsHandler {
-	dir := "./token"
-	if _, err := os.Stat(dir); os.IsNotExist(err) {
-		// Directory does not exist, create it
-		err = os.Mkdir(dir, 0755)
-		if err != nil {
-			panic(fmt.Sprintf("无法创建token文件夹 请手动创建:%s", err))
-		}
+	ctx, err := mustloadConfig()
+	if err != nil {
+		return nil
 	}
-
-	var c config.Config
-	conf.MustLoad("etc/bilidanmaku-api.yaml", &c, conf.UseEnv())
-	logx.MustSetup(c.Log)
-	logx.DisableStat()
-	//配置数据库文件夹
-	info, err := os.Stat(c.DBPath)
-	if os.IsNotExist(err) || !info.IsDir() {
-		err = os.MkdirAll(c.DBPath, 0777)
-		if err != nil {
-			logx.Errorf("文件夹创建失败：%s", c.DBPath)
-			return nil
-		}
-	}
-	ctx := svc.NewServiceContext(c)
 	ws := new(wsHandler)
 	err = ws.starthttp()
 	if err != nil {
@@ -96,13 +78,46 @@ func NewWsHandler() WsHandler {
 	}
 	ws.userId, err = strconv.Atoi(strUserId)
 	ctx.RobotID = strUserId
-	roominfo, err := http.RoomInit(c.RoomId)
+	roominfo, err := http.RoomInit(ctx.Config.RoomId)
 	if err != nil {
-		logx.Error()
+		logx.Error(err)
 		//return nil
 	}
 	ctx.UserID = roominfo.Data.Uid
 	return ws
+}
+func (ws *wsHandler) ReloadConfig() error {
+	ctx, err := mustloadConfig()
+	oldconfig := *ws.svc.Config
+	if err != nil {
+		return err
+	}
+	ws.svc.Config = ctx.Config
+	if ctx.Config.RoomId != oldconfig.RoomId {
+		logx.Infof("房间号更改，更换房间号 ：%v", ctx.Config.RoomId)
+		ws.client.Stop()
+		ws.client = client.NewClient(ctx.Config.RoomId)
+		ws.client.SetCookie(http.CookieStr)
+		roominfo, err := http.RoomInit(ctx.Config.RoomId)
+		if err != nil {
+			logx.Error(err)
+			//return err
+		}
+		ctx.UserID = roominfo.Data.Uid
+		err = ws.client.Start()
+		if err != nil {
+			return err
+		}
+		ws.registerHandler()
+	}
+	if ctx.Config.CronDanmu != oldconfig.CronDanmu || !areSlicesEqual(ctx.Config.CronDanmuList, oldconfig.CronDanmuList) {
+		logx.Info("识别到定时弹幕配置发生变化，重新加载")
+		for _, i := range ws.corndanmu.Entries() {
+			ws.corndanmu.Remove(i.ID)
+		}
+		ws.corndanmuStart()
+	}
+	return nil
 }
 
 type WsHandler interface {
@@ -110,6 +125,9 @@ type WsHandler interface {
 	StopWsClient()
 	SayGoodbye()
 	starthttp() error
+	ReloadConfig() error
+	GetSvc() svc.ServiceContext
+	GetUserinfo() *entity.UserinfoLite
 }
 
 func (w *wsHandler) StartWsClient() error {
@@ -121,6 +139,12 @@ func (w *wsHandler) StartWsClient() error {
 		}
 	}
 	return w.client.Start()
+}
+func (w *wsHandler) GetUserinfo() *entity.UserinfoLite {
+	return http.GetUserInfo()
+}
+func (w *wsHandler) GetSvc() svc.ServiceContext {
+	return *w.svc
 }
 func (w *wsHandler) StopWsClient() {
 	if w.sendBulletCancel != nil {
@@ -166,36 +190,44 @@ func (w *wsHandler) startLogic() {
 	// 弹幕逻辑
 	w.danmuLogicCtx, w.danmuLogicCancel = context.WithCancel(context.Background())
 	go danmu.StartDanmuLogic(w.danmuLogicCtx, w.svc)
-	w.receiveDanmu()
+
 	logx.Info("弹幕机器人已开启")
 	// 特效欢迎
 	w.ineterractCtx, w.ineterractCancel = context.WithCancel(context.Background())
 	go logic.Interact(w.ineterractCtx)
-	w.welcomeEntryEffect()
-	w.welcomeInteractWord()
+
 	logx.Info("欢迎模块已开启")
-	// 天选自动关闭欢迎
-	w.anchorLot()
+
 	// 礼物感谢
 	w.thanksGiftCtx, w.thankGiftCancel = context.WithCancel(context.Background())
 	go logic.ThanksGift(w.thanksGiftCtx, w.svc)
-	w.thankGifts()
+
 	logx.Info("礼物感谢已开启")
 	// pk提醒
 	w.pkCtx, w.pkCancel = context.WithCancel(context.Background())
 	go logic.PK(w.pkCtx, w.svc)
+
+	// 下播提醒
+	// w.sayGoodbyeByWs()
+
+	//定时弹幕
+	w.corndanmuStart()
+
+	w.registerHandler()
+}
+func (w *wsHandler) registerHandler() {
+	w.welcomeEntryEffect()
+	w.welcomeInteractWord()
+	logx.Info("弹幕处理已开启")
+	w.receiveDanmu()
+	// 天选自动关闭欢迎
+	w.anchorLot()
+	logx.Info("pk提醒已开启")
 	w.pkBattleStart()
 	w.pkBattleEnd()
 	// 禁言用户提醒
 	w.blockUser()
-	// 下播提醒
-	// w.sayGoodbyeByWs()
-	logx.Info("pk提醒已开启")
-
-	logx.Info("弹幕处理已开启")
-	//定时弹幕
-	w.corndanmuStart()
-
+	w.thankGifts()
 }
 func (w *wsHandler) starthttp() error {
 	var err error
@@ -268,4 +300,45 @@ func (w *wsHandler) corndanmuStart() {
 		}
 	}
 	w.corndanmu.Start()
+}
+func mustloadConfig() (*svc.ServiceContext, error) {
+	dir := "./token"
+	if _, err := os.Stat(dir); os.IsNotExist(err) {
+		// Directory does not exist, create it
+		err = os.Mkdir(dir, 0755)
+		if err != nil {
+			panic(fmt.Sprintf("无法创建token文件夹 请手动创建:%s", err))
+		}
+	}
+
+	var c config.Config
+	conf.MustLoad("etc/bilidanmaku-api.yaml", &c, conf.UseEnv())
+	logx.MustSetup(c.Log)
+	logx.DisableStat()
+	//配置数据库文件夹
+	info, err := os.Stat(c.DBPath)
+	if os.IsNotExist(err) || !info.IsDir() {
+		err = os.MkdirAll(c.DBPath, 0777)
+		if err != nil {
+			logx.Errorf("文件夹创建失败：%s", c.DBPath)
+			return nil, err
+		}
+	}
+	ctx := svc.NewServiceContext(c)
+	return ctx, err
+}
+
+// 比较两个 Person 切片是否相同
+func areSlicesEqual(a, b []config.CronDanmuList) bool {
+	if len(a) != len(b) {
+		return false
+	}
+
+	for i := range a {
+		if !reflect.DeepEqual(a[i], b[i]) {
+			return false
+		}
+	}
+
+	return true
 }

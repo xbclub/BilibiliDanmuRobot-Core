@@ -10,7 +10,7 @@ import (
 )
 
 type ServiceContext struct {
-	Config        config.Config
+	Config        *config.Config
 	OtherSideUid  map[int64]bool
 	TopUid        map[int64]bool
 	SininModel    model.SingInModel
@@ -33,7 +33,7 @@ func NewServiceContext(c config.Config) *ServiceContext {
 		OtherSideUid: make(map[int64]bool),
 		TopUid:       make(map[int64]bool),
 		SininModel:   model.NewSingInModel(db, int64(c.RoomId)),
-		Config:       c,
+		Config:       &c,
 		UserID:       0,
 	}
 }
