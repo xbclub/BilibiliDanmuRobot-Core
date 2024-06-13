@@ -8,6 +8,7 @@ import (
 	"github.com/xbclub/BilibiliDanmuRobot-Core/svc"
 	"github.com/zeromicro/go-zero/core/logx"
 	"math/rand"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -17,6 +18,14 @@ func (w *wsHandler) welcomeEntryEffect() {
 	w.client.RegisterCustomEventHandler("ENTRY_EFFECT", func(s string) {
 		entry := &entity.EntryEffectText{}
 		_ = json.Unmarshal([]byte(s), entry)
+
+		if !w.svc.Config.InteractSelf && strconv.Itoa(int(entry.Data.Uid)) == w.svc.RobotID {
+			return
+		}
+		if !w.svc.Config.InteractAnchor && entry.Data.Uid == w.svc.UserID {
+			return
+		}
+
 		if v, ok := w.svc.Config.WelcomeString[fmt.Sprint(entry.Data.Uid)]; w.svc.Config.WelcomeSwitch && ok && w.svc.Config.EntryEffect {
 			//logic.PushToBulletSender(v)
 			logic.PushToInterractChan(&logic.InterractData{
