@@ -44,6 +44,15 @@ func StartDanmuLogic(ctx context.Context, svcCtx *svc.ServiceContext) {
 			uid := fmt.Sprintf("%.0f", from[0].(float64))
 			re := regexp.MustCompile("\\[(.*?)\\]")
 			danmumsg = re.ReplaceAllString(danmumsg, "")
+			cardLv := "0"
+			card := "无信仰"
+			if len(danmu.Info) > 3 {
+				cardInfo := danmu.Info[3].([]interface{})
+				if len(cardInfo) > 1 {
+					cardLv = fmt.Sprintf("%.0f", cardInfo[0].(float64))
+					card = cardInfo[1].(string)
+				}
+			}
 			if len(danmumsg) > 0 && uid != svcCtx.RobotID {
 				// 机器人相关
 				go DoDanmuProcess(danmumsg, svcCtx)
@@ -66,7 +75,7 @@ func StartDanmuLogic(ctx context.Context, svcCtx *svc.ServiceContext) {
 				go DoCMDProcess(danmumsg, uid, svcCtx)
 			}
 			// 实时输出弹幕消息
-			logx.Infof("%v %s:%s", uid, from[1], danmumsg)
+			logx.Infof("%v 「%s %s」%s:%s", uid, cardLv, card, from[1], danmumsg)
 		}
 
 	}

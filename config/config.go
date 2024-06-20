@@ -13,11 +13,12 @@ type Config struct {
 	WsServerUrl string `json:",default=wss://broadcastlv.chat.bilibili.com:2245/sub"`
 
 	// 常规设置
-	DanmuLen     int    `json:",default=20"`    // 弹幕限制长度
-	EntryMsg     string `json:",default=off"`   // 进房间自动发送的文本
-	PKNotice     bool   `json:",default=true"`  // PK信息开关
-	ShowBlockMsg bool   `json:",default=false"` // 禁言提醒开关
-	GoodbyeInfo  string `json:",optional"`      // 下播自动发送的话
+	DanmuLen      int    `json:",default=20"`    // 弹幕限制长度
+	EntryMsg      string `json:",default=off"`   // 进房间自动发送的文本
+	PKNotice      bool   `json:",default=true"`  // PK信息开关
+	ShowBlockMsg  bool   `json:",default=false"` // 禁言提醒开关
+	GoodbyeInfo   string `json:",optional"`      // 下播自动发送的话
+	AutoRedPocket bool   `json:",default=true"`  // 自动抢红包
 
 	// 关键字回复
 	KeywordReply     bool              `json:",default=false"` //关键词回复开关
