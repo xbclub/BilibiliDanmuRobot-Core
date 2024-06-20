@@ -20,8 +20,10 @@ func DoDanmuProcess(msg string, svcCtx *svc.ServiceContext) {
 		if len(svcCtx.Config.TalkRobotCmd) > 0 {
 			s = fmt.Sprintf("发送带有 %s 的弹幕和我互动", svcCtx.Config.TalkRobotCmd)
 			logic.PushToBulletSender("请尽情调戏我吧!")
+			logic.PushToBulletSender(s)
 		} else {
 			s = "互动聊天已禁用..."
+			logic.PushToBulletSender(s)
 		}
 		logic.PushToBulletSender(" ")
 		// logx.Info(s)
@@ -29,7 +31,6 @@ func DoDanmuProcess(msg string, svcCtx *svc.ServiceContext) {
 		logic.PushToBulletSender("发送「抽签」即可抽签")
 		logic.PushToBulletSender("主播发送「关闭欢迎弹幕」即可关闭欢迎弹幕")
 		logic.PushToBulletSender("主播发送「开启欢迎弹幕」即可开启欢迎弹幕")
-		logic.PushToBulletSender(s)
 	}
 
 	result := checkIsAtMe(&msg, svcCtx)
