@@ -19,13 +19,13 @@ func DoDanmuProcess(msg string, svcCtx *svc.ServiceContext) {
 		s := ""
 		if len(svcCtx.Config.TalkRobotCmd) > 0 {
 			s = fmt.Sprintf("发送带有 %s 的弹幕和我互动", svcCtx.Config.TalkRobotCmd)
-			logic.PushToBulletSender("请尽情调戏我吧!")
 			logic.PushToBulletSender(s)
+			logic.PushToBulletSender("请尽情调戏我吧!")
 		} else {
 			s = "互动聊天已禁用..."
 			logic.PushToBulletSender(s)
 		}
-		logic.PushToBulletSender(" ")
+		//logic.PushToBulletSender(" ")
 		// logx.Info(s)
 		logic.PushToBulletSender("发送「签到/打卡」即可签到")
 		logic.PushToBulletSender("发送「抽签」即可抽签")
