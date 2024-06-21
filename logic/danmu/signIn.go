@@ -13,7 +13,7 @@ import (
 )
 
 func DosignInProcess(msg, uid, username string, svcCtx *svc.ServiceContext) {
-	if msg != "签到" || msg != "打卡" {
+	if msg != "签到" && msg != "打卡" {
 		return
 	}
 	id, err := strconv.ParseInt(uid, 10, 64)
