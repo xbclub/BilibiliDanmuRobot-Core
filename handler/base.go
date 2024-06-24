@@ -250,6 +250,8 @@ func (w *wsHandler) registerHandler() {
 	// 禁言用户提醒
 	w.blockUser()
 	w.thankGifts()
+	// 红包
+	w.redPocket()
 }
 func (w *wsHandler) starthttp() error {
 	var err error
