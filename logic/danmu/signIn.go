@@ -12,6 +12,8 @@ import (
 	"strconv"
 )
 
+var info string = "签到服务异常"
+
 func DosignInProcess(msg, uid, username string, svcCtx *svc.ServiceContext) {
 	if msg != "签到" && msg != "打卡" {
 		return
@@ -19,7 +21,7 @@ func DosignInProcess(msg, uid, username string, svcCtx *svc.ServiceContext) {
 	id, err := strconv.ParseInt(uid, 10, 64)
 	if err != nil {
 		logx.Error(err)
-		logic.PushToBulletSender("签到服务异常")
+		logic.PushToBulletSender(info)
 	}
 	// 获取当前时间
 	now := carbon.Now(carbon.Local)
@@ -30,7 +32,7 @@ func DosignInProcess(msg, uid, username string, svcCtx *svc.ServiceContext) {
 		if lastdate.Year() != now.Year() || lastdate.Month() != now.Month() || lastdate.Day() != now.Day() {
 			err := svcCtx.SininModel.UpdateCount(context.Background(), id)
 			if err != nil {
-				logic.PushToBulletSender("签到服务异常")
+				logic.PushToBulletSender(info)
 				logx.Error(err)
 				return
 			}
@@ -46,13 +48,13 @@ func DosignInProcess(msg, uid, username string, svcCtx *svc.ServiceContext) {
 		}
 		err := svcCtx.SininModel.Insert(context.Background(), nil, &data)
 		if err != nil {
-			logic.PushToBulletSender("签到服务异常")
+			logic.PushToBulletSender(info)
 			logx.Error(err)
 			return
 		}
 		logic.PushToBulletSender(fmt.Sprintf("@%s,已签到1天", username))
 	default:
-		logic.PushToBulletSender("签到服务异常")
+		logic.PushToBulletSender(info)
 		logx.Error(err)
 		return
 	}
