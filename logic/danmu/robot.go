@@ -2,6 +2,7 @@ package danmu
 
 import (
 	"fmt"
+	"github.com/xbclub/BilibiliDanmuRobot-Core/entity"
 	"github.com/xbclub/BilibiliDanmuRobot-Core/logic"
 	"github.com/xbclub/BilibiliDanmuRobot-Core/svc"
 	"strings"
@@ -13,7 +14,7 @@ const (
 	hasPrefix
 )
 
-func DoDanmuProcess(msg string, svcCtx *svc.ServiceContext) {
+func DoDanmuProcess(msg string, svcCtx *svc.ServiceContext, reply ...*entity.DanmuMsgTextReplyInfo) {
 	// @帮助 打出来关键词
 	if strings.Compare("@帮助", msg) == 0 {
 		s := ""
@@ -45,7 +46,7 @@ func DoDanmuProcess(msg string, svcCtx *svc.ServiceContext) {
 	}
 	//如果发现弹幕在@我，那么调用机器人进行回复
 	if len(content) > 0 && len(svcCtx.Config.TalkRobotCmd) > 0 && msg != svcCtx.Config.EntryMsg {
-		logic.PushToBulletRobot(content)
+		logic.PushToBulletRobot(content, reply...)
 	}
 }
 

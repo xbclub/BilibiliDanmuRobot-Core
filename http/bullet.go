@@ -34,7 +34,7 @@ import (
 //	return r, nil
 //}
 
-func Send(msg string, svcCtx *svc.ServiceContext) error {
+func Send(msg string, svcCtx *svc.ServiceContext, reply ...*entity.DanmuMsgTextReplyInfo) error {
 	var err error
 	var url = "https://api.live.bilibili.com/msg/send"
 	var respdata *entity.DanmuResp = new(entity.DanmuResp)
@@ -45,6 +45,13 @@ func Send(msg string, svcCtx *svc.ServiceContext) error {
 	//m["mode"] = "4"
 	m["fontsize"] = "25"
 	m["rnd"] = strconv.FormatInt(time.Now().Unix(), 10)
+	//m["room_type"] = "0"
+	//m["jumpfrom"] = "0"
+	//m["reply_attr"] = "0"
+	if len(reply) > 0 {
+		m["reply_mid"] = reply[0].ReplyUid
+		m["replay_dmid"] = reply[0].ReplyMsgId
+	}
 	m["roomid"] = strconv.Itoa(svcCtx.Config.RoomId)
 	m["csrf"] = CookieList["bili_jct"]
 	m["csrf_token"] = CookieList["bili_jct"]
