@@ -65,6 +65,7 @@ type Config struct {
 	ThanksBlindBoxTimeout  int  `json:",default=6"`     // 盲盒统计时间
 	ThanksMinCost          int  `json:",default=0"`     // 最小感谢礼物价值
 	BlindBoxProfitLossStat bool `json:",default=true"`  // 盲盒盈亏统计
+	ThanksGiftUseAt        bool `json:",default=false"` // 使用@模式感谢
 
 	// 定时弹幕配置
 	CronDanmu bool `json:",default=false"` // 定时弹幕开关

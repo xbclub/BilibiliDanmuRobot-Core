@@ -50,7 +50,9 @@ func Send(msg string, svcCtx *svc.ServiceContext, reply ...*entity.DanmuMsgTextR
 	//m["reply_attr"] = "0"
 	if len(reply) > 0 {
 		m["reply_mid"] = reply[0].ReplyUid
-		m["replay_dmid"] = reply[0].ReplyMsgId
+		if len(reply[0].ReplyMsgId) > 0 {
+			m["replay_dmid"] = reply[0].ReplyMsgId
+		}
 	}
 	m["roomid"] = strconv.Itoa(svcCtx.Config.RoomId)
 	m["csrf"] = CookieList["bili_jct"]

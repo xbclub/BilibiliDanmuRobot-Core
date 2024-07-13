@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"math"
+	"strconv"
 	"strings"
 	"github.com/xbclub/BilibiliDanmuRobot-Core/entity"
 	"github.com/xbclub/BilibiliDanmuRobot-Core/svc"
@@ -17,6 +18,7 @@ import (
 var thanksGiver *GiftThanksGiver
 
 type GiftThanksGiver struct {
+	giftNameUidTable     map[string]int
 	giftNotBlindBoxTable map[string]map[string]map[string]int
 	giftBlindBoxTable    map[string]map[string]map[string]int
 	giftBlindBoxTimer    map[int]*time.Timer
@@ -37,6 +39,7 @@ func PushToGuardChan(g *entity.GuardBuyText) {
 func ThanksGift(ctx context.Context, svcCtx *svc.ServiceContext) {
 
 	thanksGiver = &GiftThanksGiver{
+		giftNameUidTable:     make(map[string]int),
 		giftNotBlindBoxTable: make(map[string]map[string]map[string]int),
 		giftBlindBoxTable:    make(map[string]map[string]map[string]int),
 		giftBlindBoxTimer:    make(map[int]*time.Timer),
@@ -56,11 +59,15 @@ func ThanksGift(ctx context.Context, svcCtx *svc.ServiceContext) {
 			goto END
 		case <-t.C:
 			thanksGiver.locked.Lock()
-			summarizeGift(svcCtx.Config.DanmuLen, svcCtx.Config.ThanksMinCost)
+			summarizeGift(svcCtx.Config.DanmuLen, svcCtx.Config.ThanksMinCost, svcCtx)
 			thanksGiver.locked.Unlock()
 			t.Reset(w)
 		case g = <-thanksGiver.giftChan:
 			thanksGiver.locked.Lock()
+
+			if svcCtx.Config.ThanksGiftUseAt {
+				thanksGiver.giftNameUidTable[g.Data.Uname] = g.Data.UID
+			}
 
 			giftName := g.Data.GiftName
 			if g.Data.BlindGift.OriginalGiftName != "" {
@@ -85,7 +92,7 @@ func ThanksGift(ctx context.Context, svcCtx *svc.ServiceContext) {
 						for {
 							<-t.C
 							thanksGiver.locked.Lock()
-							summarizeBlindGift(svcCtx.Config.DanmuLen)
+							summarizeBlindGift(svcCtx.Config.DanmuLen, svcCtx)
 							thanksGiver.locked.Unlock()
 							t.Stop()
 							thanksGiver.giftBlindBoxTimer[g.Data.UID] = nil
@@ -112,7 +119,7 @@ func ThanksGift(ctx context.Context, svcCtx *svc.ServiceContext) {
 END:
 }
 
-func summarizeBlindGift(danmuLen int) {
+func summarizeBlindGift(danmuLen int, svcCtx *svc.ServiceContext) {
 	// 盲盒礼物
 	for name, m := range thanksGiver.giftBlindBoxTable {
 		giftstring := []string{}
@@ -131,7 +138,9 @@ func summarizeBlindGift(danmuLen int) {
 
 		msgShort := ""
 
-		msg = name + "的"
+		if !svcCtx.Config.ThanksGiftUseAt {
+			msg = name + "的"
+		}
 		for k, v := range giftstring {
 			if k == 0 {
 				msg += v
@@ -145,16 +154,30 @@ func summarizeBlindGift(danmuLen int) {
 		ms := []rune(msg)
 
 		if len(ms) > danmuLen {
-			PushToBulletSender(name + "的")
-			PushToBulletSender(msgShort)
+			if !svcCtx.Config.ThanksGiftUseAt {
+				PushToBulletSender(name + "的")
+				PushToBulletSender(msgShort)
+			} else {
+				PushToBulletSender(msgShort, &entity.DanmuMsgTextReplyInfo{
+					ReplyUid:   strconv.Itoa(thanksGiver.giftNameUidTable[name]),
+					ReplyMsgId: "",
+				})
+			}
 		} else {
-			PushToBulletSender(msg)
+			if !svcCtx.Config.ThanksGiftUseAt {
+				PushToBulletSender(msg)
+			} else {
+				PushToBulletSender(msg, &entity.DanmuMsgTextReplyInfo{
+					ReplyUid:   strconv.Itoa(thanksGiver.giftNameUidTable[name]),
+					ReplyMsgId: "",
+				})
+			}
 		}
 		delete(thanksGiver.giftBlindBoxTable, name)
 	}
 }
 
-func summarizeGift(danmuLen int, minCost int) {
+func summarizeGift(danmuLen int, minCost int, svcCtx *svc.ServiceContext) {
 	for name, m := range thanksGiver.giftNotBlindBoxTable {
 		sumCost := 0
 		giftstring := []string{}
@@ -170,7 +193,11 @@ func summarizeGift(danmuLen int, minCost int) {
 
 		msgShort := ""
 
-		msg = "感谢" + name + "的"
+		if !svcCtx.Config.ThanksGiftUseAt {
+			msg = "感谢" + name + "的"
+		} else {
+			msg = "感谢"
+		}
 		for k, v := range giftstring {
 			if k == 0 {
 				msg += v
@@ -185,10 +212,24 @@ func summarizeGift(danmuLen int, minCost int) {
 		if sumCost < minCost {
 			// discard
 		} else if len(ms) > danmuLen {
-			PushToBulletSender("感谢 " + name + " 的")
-			PushToBulletSender(msgShort)
+			if !svcCtx.Config.ThanksGiftUseAt {
+				PushToBulletSender("感谢 " + name + " 的")
+				PushToBulletSender(msgShort)
+			} else {
+				PushToBulletSender(msgShort, &entity.DanmuMsgTextReplyInfo{
+					ReplyUid:   strconv.Itoa(thanksGiver.giftNameUidTable[name]),
+					ReplyMsgId: "",
+				})
+			}
 		} else {
-			PushToBulletSender(msg)
+			if !svcCtx.Config.ThanksGiftUseAt {
+				PushToBulletSender(msg)
+			} else {
+				PushToBulletSender(msg, &entity.DanmuMsgTextReplyInfo{
+					ReplyUid:   strconv.Itoa(thanksGiver.giftNameUidTable[name]),
+					ReplyMsgId: "",
+				})
+			}
 		}
 
 		//fmt.Println("礼物-----", name, giftstring)
