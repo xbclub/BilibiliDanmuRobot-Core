@@ -2,6 +2,7 @@ package logic
 
 import (
 	"context"
+	"github.com/xbclub/BilibiliDanmuRobot-Core/entity"
 	"github.com/xbclub/BilibiliDanmuRobot-Core/http"
 	"github.com/xbclub/BilibiliDanmuRobot-Core/svc"
 	"github.com/zeromicro/go-zero/core/logx"
@@ -11,18 +12,22 @@ import (
 var sender *BulletSender
 
 type BulletSender struct {
-	bulletChan chan string
+	bulletChan chan entity.Bullet
 }
 
-func PushToBulletSender(bullet string) {
-	logx.Info("PushToBulletSender成功", bullet)
+func PushToBulletSender(msg string, reply ...*entity.DanmuMsgTextReplyInfo) {
+	logx.Info("PushToBulletSender成功", msg)
+	bullet := entity.Bullet{
+		Msg:   msg,
+		Reply: reply,
+	}
 	sender.bulletChan <- bullet
 }
 
 func StartSendBullet(ctx context.Context, svcCtx *svc.ServiceContext) {
 
 	sender = &BulletSender{
-		bulletChan: make(chan string, 1000),
+		bulletChan: make(chan entity.Bullet, 1000),
 	}
 
 	var msg string
@@ -30,7 +35,8 @@ func StartSendBullet(ctx context.Context, svcCtx *svc.ServiceContext) {
 		select {
 		case <-ctx.Done():
 			goto END
-		case msg = <-sender.bulletChan:
+		case bullet := <-sender.bulletChan:
+			msg = bullet.Msg
 			var danmuLen = svcCtx.Config.DanmuLen
 			var msgdata []string
 			msgrun := []rune(msg)
@@ -48,7 +54,7 @@ func StartSendBullet(ctx context.Context, svcCtx *svc.ServiceContext) {
 				msgdata = append(msgdata, string(msgrun[(m-1)*danmuLen:danmuLen*m]))
 			}
 			for _, msgs := range msgdata {
-				if err := http.Send(msgs, svcCtx); err != nil {
+				if err := http.Send(msgs, svcCtx, bullet.Reply...); err != nil {
 					logx.Errorf("弹幕发送失败：%s msg: %s", err, msgs)
 				} else {
 					logx.Infof("弹幕发送成功：%s", msgs)

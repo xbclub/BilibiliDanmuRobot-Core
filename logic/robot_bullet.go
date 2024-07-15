@@ -2,6 +2,7 @@ package logic
 
 import (
 	"context"
+	"github.com/xbclub/BilibiliDanmuRobot-Core/entity"
 	"github.com/xbclub/BilibiliDanmuRobot-Core/http"
 	"github.com/xbclub/BilibiliDanmuRobot-Core/svc"
 	"github.com/zeromicro/go-zero/core/logx"
@@ -12,20 +13,24 @@ import (
 var robot *BulletRobot
 
 type BulletRobot struct {
-	bulletRobotChan chan string
+	bulletRobotChan chan entity.Bullet
 }
 
-func PushToBulletRobot(content string) {
+func PushToBulletRobot(content string, reply ...*entity.DanmuMsgTextReplyInfo) {
 	logx.Infof("PushToBulletRobot成功：%s", content)
-	robot.bulletRobotChan <- content
+	buttle := entity.Bullet{
+		Msg:   content,
+		Reply: reply,
+	}
+	robot.bulletRobotChan <- buttle
 }
 
 func StartBulletRobot(ctx context.Context, svcCtx *svc.ServiceContext) {
 	robot = &BulletRobot{
-		bulletRobotChan: make(chan string, 1000),
+		bulletRobotChan: make(chan entity.Bullet, 1000),
 	}
 
-	var content string
+	var content entity.Bullet
 
 	for {
 		select {
@@ -38,28 +43,28 @@ func StartBulletRobot(ctx context.Context, svcCtx *svc.ServiceContext) {
 END:
 }
 
-func handleRobotBullet(content string, svcCtx *svc.ServiceContext) {
+func handleRobotBullet(content entity.Bullet, svcCtx *svc.ServiceContext) {
 	var err error
 	var reply string
 	if svcCtx.Config.RobotMode == "ChatGPT" {
-		if reply, err = http.RequestChatgptRobot(content, svcCtx); err != nil {
+		if reply, err = http.RequestChatgptRobot(content.Msg, svcCtx); err != nil {
 			logx.Errorf("请求机器人失败：%v", err)
-			PushToBulletSender("不好意思，机器人坏掉了...")
+			PushToBulletSender("不好意思，机器人坏掉了...", content.Reply...)
 			return
 		}
 	} else {
-		if reply, err = http.RequestQingyunkeRobot(content); err != nil {
+		if reply, err = http.RequestQingyunkeRobot(content.Msg); err != nil {
 			logx.Errorf("请求机器人失败：%v", err)
-			PushToBulletSender("不好意思，机器人坏掉了...")
+			PushToBulletSender("不好意思，机器人坏掉了...", content.Reply...)
 			return
 		}
 		bulltes := splitRobotReply(reply, svcCtx)
 		for _, v := range bulltes {
-			PushToBulletSender(v)
+			PushToBulletSender(v, content.Reply...)
 		}
 		return
 	}
-	PushToBulletSender(reply)
+	PushToBulletSender(reply, content.Reply...)
 	logx.Infof("机器人回复：%s", reply)
 
 }
