@@ -80,6 +80,9 @@ func StartDanmuLogic(ctx context.Context, svcCtx *svc.ServiceContext) {
 				if svcCtx.Config.SignInEnable {
 					go DosignInProcess(danmumsg, uid, from[1].(string), svcCtx, reply)
 				}
+				if svcCtx.Config.DanmuCntEnable {
+					go BadgeActiveCheckProcess(danmumsg, uid, from[1].(string), svcCtx, reply)
+				}
 				// 抽签
 				if svcCtx.Config.DrawByLot {
 					go DodrawByLotProcess(danmumsg, from[1].(string), svcCtx, reply)

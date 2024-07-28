@@ -9,7 +9,7 @@ import (
 )
 
 type (
-	SingInModel interface {
+	SignInModel interface {
 		Insert(ctx context.Context, tx *gorm.DB, data *SingInBase) error
 		FindOne(ctx context.Context, id int64) (*SingInBase, error)
 		UpdateCount(ctx context.Context, uid int64) error
@@ -26,7 +26,7 @@ type (
 	}
 )
 
-func NewSingInModel(conn *gorm.DB, RoomID int64) SingInModel {
+func NewSignInModel(conn *gorm.DB, RoomID int64) SignInModel {
 	err := conn.Table(fmt.Sprintf("room_%v", RoomID)).AutoMigrate(&SingInBase{})
 	if err != nil {
 		logx.Error(err)

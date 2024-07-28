@@ -83,6 +83,11 @@ type Config struct {
 	DBPath       string `json:",default=./db"`
 	DBName       string `json:",default=sqliteDataBase.db"`
 
+	// 弹幕计数设置
+	DanmuCntEnable bool   `json:",default=true"` // 弹幕统计提醒功能
+	DanmuCntDBPath string `json:",default=./db"`
+	DanmuCntDBName string `json:",default=DanmuCntSqliteDataBase.db"`
+
 	// 杂项设置 GUI无界面配置
 	CustomizeBullet bool `json:",default=false"` // 手动弹幕发送(命令行)	GUI不要有选项
 

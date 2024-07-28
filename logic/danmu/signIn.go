@@ -26,12 +26,12 @@ func DosignInProcess(msg, uid, username string, svcCtx *svc.ServiceContext, repl
 	}
 	// 获取当前时间
 	now := carbon.Now(carbon.Local)
-	signInfo, err := svcCtx.SininModel.FindOne(context.Background(), id)
+	signInfo, err := svcCtx.SignInModel.FindOne(context.Background(), id)
 	switch err {
 	case nil:
 		lastdate := carbon.CreateFromTimestamp(signInfo.LastDay, carbon.Local)
 		if lastdate.Year() != now.Year() || lastdate.Month() != now.Month() || lastdate.Day() != now.Day() {
-			err := svcCtx.SininModel.UpdateCount(context.Background(), id)
+			err := svcCtx.SignInModel.UpdateCount(context.Background(), id)
 			if err != nil {
 				logic.PushToBulletSender(info, reply...)
 				logx.Error(err)
@@ -47,7 +47,7 @@ func DosignInProcess(msg, uid, username string, svcCtx *svc.ServiceContext, repl
 			LastDay: now.Timestamp(),
 			Count:   1,
 		}
-		err := svcCtx.SininModel.Insert(context.Background(), nil, &data)
+		err := svcCtx.SignInModel.Insert(context.Background(), nil, &data)
 		if err != nil {
 			logic.PushToBulletSender(info, reply...)
 			logx.Error(err)
