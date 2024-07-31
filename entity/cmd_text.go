@@ -487,21 +487,87 @@ type RankListInfo struct {
 				MedalColorBorder int    `json:"medalColorBorder"`
 				MedalName        string `json:"medalName"`
 				Level            int    `json:"level"`
-				TargetId         int64  `json:"targetId"`
+				TargetID         int    `json:"targetId"`
 				IsLight          int    `json:"isLight"`
-			} `json:"medalInfo"`
-			GuardLevel int `json:"guard_level"`
+			} `json:"medalInfo,omitempty"`
+			GuardLevel  int  `json:"guard_level"`
+			WealthLevel int  `json:"wealth_level"`
+			IsMystery   bool `json:"is_mystery"`
+			Uinfo       struct {
+				Uid  int `json:"uid"`
+				Base struct {
+					Name         string `json:"name"`
+					Face         string `json:"face"`
+					NameColor    int    `json:"name_color"`
+					IsMystery    bool   `json:"is_mystery"`
+					RiskCtrlInfo struct {
+						Name string `json:"name"`
+						Face string `json:"face"`
+					} `json:"risk_ctrl_info"`
+					OriginInfo struct {
+						Name string `json:"name"`
+						Face string `json:"face"`
+					} `json:"origin_info"`
+					OfficialInfo struct {
+						Role  int    `json:"role"`
+						Title string `json:"title"`
+						Desc  string `json:"desc"`
+						Type  int    `json:"type"`
+					} `json:"official_info"`
+					NameColorStr string `json:"name_color_str"`
+				} `json:"base"`
+				Medal *struct {
+					Name               string `json:"name"`
+					Level              int    `json:"level"`
+					ColorStart         int    `json:"color_start"`
+					ColorEnd           int    `json:"color_end"`
+					ColorBorder        int    `json:"color_border"`
+					Color              int    `json:"color"`
+					ID                 int    `json:"id"`
+					Typ                int    `json:"typ"`
+					IsLight            int    `json:"is_light"`
+					Ruid               int    `json:"ruid"`
+					GuardLevel         int    `json:"guard_level"`
+					Score              int    `json:"score"`
+					GuardIcon          string `json:"guard_icon"`
+					HonorIcon          string `json:"honor_icon"`
+					V2MedalColorStart  string `json:"v2_medal_color_start"`
+					V2MedalColorEnd    string `json:"v2_medal_color_end"`
+					V2MedalColorBorder string `json:"v2_medal_color_border"`
+					V2MedalColorText   string `json:"v2_medal_color_text"`
+					V2MedalColorLevel  string `json:"v2_medal_color_level"`
+					UserReceiveCount   int    `json:"user_receive_count"`
+				} `json:"medal,omitempty"`
+				Wealth struct {
+					Level     int    `json:"level"`
+					DmIconKey string `json:"dm_icon_key"`
+				} `json:"wealth"`
+				Title interface{} `json:"title"`
+				Guard struct {
+					Level      int    `json:"level"`
+					ExpiredStr string `json:"expired_str"`
+				} `json:"guard"`
+				UheadFrame  interface{} `json:"uhead_frame"`
+				GuardLeader interface{} `json:"guard_leader"`
+			} `json:"uinfo"`
 		} `json:"OnlineRankItem"`
 		OwnInfo struct {
-			Uid        int    `json:"uid"`
-			Name       string `json:"name"`
-			Face       string `json:"face"`
-			Rank       int    `json:"rank"`
-			NeedScore  int    `json:"needScore"`
-			Score      int    `json:"score"`
-			GuardLevel int    `json:"guard_level"`
+			Uid         int         `json:"uid"`
+			Name        string      `json:"name"`
+			Face        string      `json:"face"`
+			Rank        int         `json:"rank"`
+			NeedScore   int         `json:"needScore"`
+			Score       int         `json:"score"`
+			GuardLevel  int         `json:"guard_level"`
+			WealthLevel int         `json:"wealth_level"`
+			IsMystery   bool        `json:"is_mystery"`
+			Uinfo       interface{} `json:"uinfo"`
 		} `json:"ownInfo"`
 		TipsText  string `json:"tips_text"`
 		ValueText string `json:"value_text"`
+		Ab        struct {
+			GuardAccompanyList int `json:"guard_accompany_list"`
+		} `json:"ab"`
+		OnlineNumText string `json:"onlineNumText"`
 	} `json:"data"`
 }

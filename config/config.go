@@ -38,6 +38,7 @@ type Config struct {
 
 	// 欢迎配置
 	InteractWord       bool       `json:",default=false"`         // 欢迎弹幕开关
+	WelcomeUseAt       bool       `json:",default=false"`         // 使用@模式欢迎
 	WelcomeDanmu       []string   `json:",default='欢迎 {user} ~'"` // 欢迎语列表
 	InteractWordByTime bool       `json:",default=false"`         // 按时间段欢迎
 	WelcomeDanmuByTime []struct { // 分时段欢迎配置列表
@@ -82,11 +83,6 @@ type Config struct {
 	SignInEnable bool   `json:",default=true"` // 签到
 	DBPath       string `json:",default=./db"`
 	DBName       string `json:",default=sqliteDataBase.db"`
-
-	// 弹幕计数设置
-	DanmuCntEnable bool   `json:",default=true"` // 弹幕统计提醒功能
-	DanmuCntDBPath string `json:",default=./db"`
-	DanmuCntDBName string `json:",default=DanmuCntSqliteDataBase.db"`
 
 	// 杂项设置 GUI无界面配置
 	CustomizeBullet bool `json:",default=false"` // 手动弹幕发送(命令行)	GUI不要有选项

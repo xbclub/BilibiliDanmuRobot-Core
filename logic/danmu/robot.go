@@ -29,6 +29,7 @@ func DoDanmuProcess(msg string, svcCtx *svc.ServiceContext, reply ...*entity.Dan
 		//logic.PushToBulletSender(" ")
 		// logx.Info(s)
 		logic.PushToBulletSender("发送「签到/打卡」即可签到")
+		logic.PushToBulletSender("发送「查询弹幕」即可查询自己发送的弹幕数")
 		logic.PushToBulletSender("发送「抽签」即可抽签")
 		logic.PushToBulletSender("主播发送「关闭欢迎弹幕」即可关闭欢迎弹幕")
 		logic.PushToBulletSender("主播发送「开启欢迎弹幕」即可开启欢迎弹幕")

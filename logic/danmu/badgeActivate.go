@@ -52,26 +52,24 @@ func BadgeActiveCheckProcess(msg, uid, username string, svcCtx *svc.ServiceConte
 		return
 	}
 
-	if (msg == "查询弹幕") || (msg == "打卡") {
+	if msg == "查询弹幕" {
 		yesterdayDate := svcCtx.DanmuCntModel.GetDateStr(1)
 		beforeyesterdayDate := svcCtx.DanmuCntModel.GetDateStr(2)
 		yesterdayDanmuCnt, err1 := svcCtx.DanmuCntModel.FindOne(context.Background(), id, yesterdayDate)
 		beforeyesterdayDanmuCnt, err2 := svcCtx.DanmuCntModel.FindOne(context.Background(), id, beforeyesterdayDate)
-		todayday_num := int64(0)
-		yesterday_num := int64(0)
-		beforeyes_num := int64(0)
+		todayNum := int64(0)
+		yesterdayNum := int64(0)
+		beforeYesterdayNum := int64(0)
 		if err == nil {
-			todayday_num = todayDanmuCnt.Count
+			todayNum = todayDanmuCnt.Count
 		}
 		if err1 == nil {
-			yesterday_num = yesterdayDanmuCnt.Count
+			yesterdayNum = yesterdayDanmuCnt.Count
 		}
 		if err2 == nil {
-			beforeyes_num = beforeyesterdayDanmuCnt.Count
+			beforeYesterdayNum = beforeyesterdayDanmuCnt.Count
 		}
-		logic.PushToBulletSender(fmt.Sprintf("今天昨天前天各发送了：%v，%v，%v条弹幕", todayday_num, yesterday_num, beforeyes_num), reply...)
-	} else {
-
+		logic.PushToBulletSender(fmt.Sprintf("今/昨/前天各发送了：%v，%v，%v条弹幕", todayNum, yesterdayNum, beforeYesterdayNum), reply...)
 	}
 
 }

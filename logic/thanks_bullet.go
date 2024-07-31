@@ -31,9 +31,14 @@ func PushToGiftChan(g *entity.SendGiftText) {
 	thanksGiver.giftChan <- g
 }
 
-func PushToGuardChan(g *entity.GuardBuyText) {
-	msg := "感谢 " + g.Data.Username + " 的 " + g.Data.GiftName
-	PushToBulletSender(msg)
+func PushToGuardChan(g *entity.GuardBuyText, reply ...*entity.DanmuMsgTextReplyInfo) {
+	if reply != nil {
+		msg := "感谢" + g.Data.GiftName
+		PushToBulletSender(msg, reply...)
+	} else {
+		msg := "感谢 " + g.Data.Username + " 的 " + g.Data.GiftName
+		PushToBulletSender(msg)
+	}
 }
 
 func ThanksGift(ctx context.Context, svcCtx *svc.ServiceContext) {
