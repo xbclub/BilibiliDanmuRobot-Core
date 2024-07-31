@@ -81,6 +81,8 @@ type Config struct {
 
 	// 签到设置
 	SignInEnable bool   `json:",default=true"` // 签到
+	// 弹幕计数设置
+	DanmuCntEnable bool   `json:",default=true"` // 弹幕统计提醒功能
 	DBPath       string `json:",default=./db"`
 	DBName       string `json:",default=sqliteDataBase.db"`
 
