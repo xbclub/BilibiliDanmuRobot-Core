@@ -7,16 +7,18 @@ import (
 
 	"github.com/xbclub/BilibiliDanmuRobot-Core/entity"
 	"github.com/xbclub/BilibiliDanmuRobot-Core/logic"
+	"github.com/xbclub/BilibiliDanmuRobot-Core/logic/danmu"
 )
 
 // 礼物感谢
 func (w *wsHandler) thankGifts() {
 	w.client.RegisterCustomEventHandler("SEND_GIFT", func(s string) {
+		send := &entity.SendGiftText{}
+		_ = json.Unmarshal([]byte(s), send)
 		if w.svc.Config.ThanksGift {
-			send := &entity.SendGiftText{}
-			_ = json.Unmarshal([]byte(s), send)
 			logic.PushToGiftChan(send)
 		}
+		danmu.SaveBlindBoxStat(send, w.svc)
 	})
 	w.client.RegisterCustomEventHandler("GUARD_BUY", func(s string) {
 		if w.svc.Config.ThanksGift {

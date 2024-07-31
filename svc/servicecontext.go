@@ -10,12 +10,13 @@ import (
 )
 
 type ServiceContext struct {
-	Config        *config.Config
-	OtherSideUid  map[int64]bool
-	SignInModel   model.SignInModel
-	DanmuCntModel model.DanmuCntModel
-	UserID        int64 //主播id
-	Autointerract struct {
+	Config       *config.Config
+	OtherSideUid map[int64]bool
+	SignInModel       model.SignInModel
+	DanmuCntModel     model.DanmuCntModel
+	BlindBoxStatModel model.BlindBoxStatModel
+	UserID            int64 //主播id
+	Autointerract     struct {
 		EntryEffect        bool
 		WelcomeHighWealthy bool
 		InteractWord       bool
@@ -30,10 +31,11 @@ func NewServiceContext(c config.Config) *ServiceContext {
 		panic(err)
 	}
 	return &ServiceContext{
-		OtherSideUid:  make(map[int64]bool),
-		SignInModel:   model.NewSignInModel(db, int64(c.RoomId)),
-		DanmuCntModel: model.NewDanmuCntModel(db, int64(c.RoomId)),
-		Config:        &c,
-		UserID:        0,
+		OtherSideUid: make(map[int64]bool),
+		SignInModel:       model.NewSignInModel(db, int64(c.RoomId)),
+		DanmuCntModel:     model.NewDanmuCntModel(db, int64(c.RoomId)),
+		BlindBoxStatModel: model.NewBlindBoxStatModel(db, int64(c.RoomId)),
+		Config:            &c,
+		UserID:            0,
 	}
 }
