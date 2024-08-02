@@ -142,9 +142,15 @@ func getRandomWelcome(msg string, svcCtx *svc.ServiceContext) string {
 	// 	content = "舰长 " + content
 	// }
 	r := "{user}"
-	s = strings.ReplaceAll(s, r+", ", r+"\n")
-	s = strings.ReplaceAll(s, r+",", r+"\n")
-	s = strings.ReplaceAll(s, r+"，", r+"\n")
+	replace := r + "\n"
+	if svcCtx.Config.WelcomeUseAt {
+		replace = "，"
+		r = " {user}"
+	}
+	s = strings.ReplaceAll(s, r+", ", replace)
+	s = strings.ReplaceAll(s, r+",", replace)
+	s = strings.ReplaceAll(s, r+"，", replace)
+
 	s = strings.ReplaceAll(s, r, content)
 	return s
 }

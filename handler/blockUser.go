@@ -33,7 +33,7 @@ func (w *wsHandler) blockUser() {
 			} else { // FIXME: 没有抓到数据 待定
 				op = "解开禁言"
 			}
-			s := fmt.Sprintf("用户 %s 被%s %s!", info.Data.UName, oper, op)
+			s := fmt.Sprintf("用户 %s 被%s %s!", info.Data.Uname, oper, op)
 			logic.PushToBulletSender(s)
 		}
 	})

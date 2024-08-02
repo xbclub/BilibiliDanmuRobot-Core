@@ -69,10 +69,18 @@ func (w *wsHandler) welcomeInteractWord() {
 				if len(interact.Data.Uname) == 0 {
 					return
 				}
-				msg := "感谢 " + shortName(interact.Data.Uname, 8, w.svc.Config.DanmuLen) + " 的关注!"
-				logic.PushToBulletSender(msg)
-				if w.svc.Config.FocusDanmu != nil && len(w.svc.Config.FocusDanmu) > 0 {
-					logic.PushToBulletSender(w.svc.Config.FocusDanmu[random.Intn(len(w.svc.Config.FocusDanmu))])
+				msg := ""
+				if w.svc.Config.WelcomeUseAt {
+					msg = "感谢关注!" + w.svc.Config.FocusDanmu[random.Intn(len(w.svc.Config.FocusDanmu))]
+					logic.PushToBulletSender(msg, &entity.DanmuMsgTextReplyInfo{
+						ReplyUid: strconv.FormatInt(interact.Data.Uid, 10),
+					})
+				} else {
+					msg := "感谢 " + shortName(interact.Data.Uname, 8, w.svc.Config.DanmuLen) + " 的关注!"
+					logic.PushToBulletSender(msg)
+					if w.svc.Config.FocusDanmu != nil && len(w.svc.Config.FocusDanmu) > 0 {
+						logic.PushToBulletSender(w.svc.Config.FocusDanmu[random.Intn(len(w.svc.Config.FocusDanmu))])
+					}
 				}
 			}
 		} else if interact.Data.MsgType == 3 {
@@ -80,10 +88,18 @@ func (w *wsHandler) welcomeInteractWord() {
 				if len(interact.Data.Uname) == 0 {
 					return
 				}
-				msg := "感谢 " + shortName(interact.Data.Uname, 8, w.svc.Config.DanmuLen) + " 的分享!"
-				logic.PushToBulletSender(msg)
-				if w.svc.Config.FocusDanmu != nil && len(w.svc.Config.FocusDanmu) > 0 {
-					logic.PushToBulletSender(w.svc.Config.FocusDanmu[random.Intn(len(w.svc.Config.FocusDanmu))])
+				msg := ""
+				if w.svc.Config.WelcomeUseAt {
+					msg = "感谢分享!" + w.svc.Config.FocusDanmu[random.Intn(len(w.svc.Config.FocusDanmu))]
+					logic.PushToBulletSender(msg, &entity.DanmuMsgTextReplyInfo{
+						ReplyUid: strconv.FormatInt(interact.Data.Uid, 10),
+					})
+				} else {
+					msg = "感谢 " + shortName(interact.Data.Uname, 8, w.svc.Config.DanmuLen) + " 的分享!"
+					logic.PushToBulletSender(msg)
+					if w.svc.Config.FocusDanmu != nil && len(w.svc.Config.FocusDanmu) > 0 {
+						logic.PushToBulletSender(w.svc.Config.FocusDanmu[random.Intn(len(w.svc.Config.FocusDanmu))])
+					}
 				}
 			}
 		} else {
@@ -124,6 +140,7 @@ func handleInterractByTime(uid int64, uname string, svcCtx *svc.ServiceContext) 
 	// 午夜 - Midnight 00:00 -- 2:00
 	//s := []rune(uname)
 	r := "{user}"
+	rep := r + "\n"
 
 	if svcCtx.Config.InteractWordByTime &&
 		svcCtx.Config.WelcomeDanmuByTime != nil &&
@@ -136,15 +153,25 @@ func handleInterractByTime(uid int64, uname string, svcCtx *svc.ServiceContext) 
 				if danmuCfg.Enabled && len(danmuCfg.Danmu) > 0 {
 					szWelcomOrig := danmuCfg.Danmu[random.Intn(len(danmuCfg.Danmu))]
 
-					welcome := strings.ReplaceAll(szWelcomOrig, r, shortName(uname, 3, svcCtx.Config.DanmuLen))
-					rWelcome := []rune(welcome)
-					if len(rWelcome) > svcCtx.Config.DanmuLen {
-						szWelcomTmp := strings.ReplaceAll(szWelcomOrig, r+", ", r+"\n")
-						szWelcomTmp = strings.ReplaceAll(szWelcomTmp, r+",", r+"\n")
-						szWelcomTmp = strings.ReplaceAll(szWelcomTmp, r+"，", r+"\n")
-						return strings.ReplaceAll(szWelcomTmp, r, uname)
+					if svcCtx.Config.WelcomeUseAt {
+						rep = "，"
+						r = " {user}"
+						szWelcomTmp := strings.ReplaceAll(szWelcomOrig, r+", ", rep)
+						szWelcomTmp = strings.ReplaceAll(szWelcomTmp, r+",", rep)
+						szWelcomTmp = strings.ReplaceAll(szWelcomTmp, r+"，", rep)
+						szWelcomTmp = strings.ReplaceAll(szWelcomTmp, r, "")
+						return szWelcomTmp
 					} else {
-						return welcome
+						welcome := strings.ReplaceAll(szWelcomOrig, r, shortName(uname, 3, svcCtx.Config.DanmuLen))
+						rWelcome := []rune(welcome)
+						if len(rWelcome) > svcCtx.Config.DanmuLen {
+							szWelcomTmp := strings.ReplaceAll(szWelcomOrig, r+", ", rep)
+							szWelcomTmp = strings.ReplaceAll(szWelcomTmp, r+",", rep)
+							szWelcomTmp = strings.ReplaceAll(szWelcomTmp, r+"，", rep)
+							return strings.ReplaceAll(szWelcomTmp, r, uname)
+						} else {
+							return welcome
+						}
 					}
 				} else {
 					return handleInterract(uid, uname, svcCtx)
@@ -159,29 +186,43 @@ func handleInterractByTime(uid int64, uname string, svcCtx *svc.ServiceContext) 
 func handleInterract(uid int64, uname string, svcCtx *svc.ServiceContext) string {
 	s := []rune(uname)
 	r := "{user}"
+	rep := r + "\n"
 	if _, ook := svcCtx.OtherSideUid[uid]; ook {
-		szWelcom := "欢迎  过来串门~"
-		maxLen := (svcCtx.Config.DanmuLen - len([]rune(szWelcom)))
-		if len(s) > maxLen && maxLen > 0 {
-			return "欢迎 " + string(s[0:maxLen-1]) + "… 过来串门~"
+		if svcCtx.Config.WelcomeUseAt {
+			return "欢迎过来串门~"
 		} else {
-			return "欢迎 " + uname + " 过来串门~"
+			szWelcom := "欢迎  过来串门~"
+			maxLen := (svcCtx.Config.DanmuLen - len([]rune(szWelcom)))
+			if len(s) > maxLen && maxLen > 0 {
+				return "欢迎 " + string(s[0:maxLen-1]) + "… 过来串门~"
+			} else {
+				return "欢迎 " + uname + " 过来串门~"
+			}
 		}
 	} else {
 		szWelcomOrig := svcCtx.Config.WelcomeDanmu[random.Intn(len(svcCtx.Config.WelcomeDanmu))]
 
-		welcome := strings.ReplaceAll(szWelcomOrig, r, shortName(uname, 3, svcCtx.Config.DanmuLen))
-		rWelcome := []rune(welcome)
-		if len(rWelcome) > svcCtx.Config.DanmuLen {
-			szWelcomTmp := strings.ReplaceAll(szWelcomOrig, r+", ", r+"\n")
-			szWelcomTmp = strings.ReplaceAll(szWelcomTmp, r+",", r+"\n")
-			szWelcomTmp = strings.ReplaceAll(szWelcomTmp, r+"，", r+"\n")
-			szWelcomTmp = strings.ReplaceAll(szWelcomTmp, r, r+"\n")
-			return strings.ReplaceAll(szWelcomTmp, r, uname)
+		if svcCtx.Config.WelcomeUseAt {
+			rep = "，"
+			r = " {user}"
+			szWelcomTmp := strings.ReplaceAll(szWelcomOrig, r+", ", rep)
+			szWelcomTmp = strings.ReplaceAll(szWelcomTmp, r+",", rep)
+			szWelcomTmp = strings.ReplaceAll(szWelcomTmp, r+"，", rep)
+			szWelcomTmp = strings.ReplaceAll(szWelcomTmp, r, rep)
+			return szWelcomTmp
 		} else {
-			return welcome
+			welcome := strings.ReplaceAll(szWelcomOrig, r, shortName(uname, 3, svcCtx.Config.DanmuLen))
+			rWelcome := []rune(welcome)
+			if len(rWelcome) > svcCtx.Config.DanmuLen {
+				szWelcomTmp := strings.ReplaceAll(szWelcomOrig, r+", ", rep)
+				szWelcomTmp = strings.ReplaceAll(szWelcomTmp, r+",", rep)
+				szWelcomTmp = strings.ReplaceAll(szWelcomTmp, r+"，", rep)
+				szWelcomTmp = strings.ReplaceAll(szWelcomTmp, r, rep)
+				return strings.ReplaceAll(szWelcomTmp, r, uname)
+			} else {
+				return welcome
+			}
 		}
-
 	}
 }
 func shortName(uname string, alreadyLen, danmuLen int) string {

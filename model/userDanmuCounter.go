@@ -29,13 +29,13 @@ type (
 )
 
 func NewDanmuCntModel(conn *gorm.DB, RoomID int64) DanmuCntModel {
-	err := conn.Table(fmt.Sprintf("room_%v", RoomID)).AutoMigrate(&DanmuCntBase{})
+	err := conn.Table(fmt.Sprintf("danmu_%v", RoomID)).AutoMigrate(&DanmuCntBase{})
 	if err != nil {
 		logx.Error(err)
 	}
 	return &defaultDanmuCntModel{
 		conn:  conn,
-		table: fmt.Sprintf("room_%v", RoomID),
+		table: fmt.Sprintf("danmu_%v", RoomID),
 	}
 }
 

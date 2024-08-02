@@ -103,15 +103,15 @@ func handlerPK(roomid int, svcCtx *svc.ServiceContext) {
 	for k := range svcCtx.OtherSideUid {
 		delete(svcCtx.OtherSideUid, k)
 	}
-	for k := range svcCtx.TopUid {
-		delete(svcCtx.TopUid, k)
-	}
+	// for k := range svcCtx.TopUid {
+	// 	delete(svcCtx.TopUid, k)
+	// }
 
 	for _, data := range listInfo.Data.List {
-		if data.IsAlive == 1 {
-			toplistalive++
-		}
-		svcCtx.TopUid[data.Uid] = true
+		// if data.IsAlive == 1 {
+		// 	toplistalive++
+		// }
+		// svcCtx.TopUid[data.Uid] = true
 		svcCtx.OtherSideUid[data.Uid] = true
 	}
 	rankListInfo, err := http.RankListInfo(roomid, userinfo.Data.Info.Uid, 1)
@@ -122,7 +122,10 @@ func handlerPK(roomid int, svcCtx *svc.ServiceContext) {
 	}
 	for _, data := range rankListInfo.Data.OnlineRankItem {
 		rankcount += data.Score
-		if _, ok := svcCtx.TopUid[data.Uid]; ok {
+		// if _, ok := svcCtx.TopUid[data.Uid]; ok {
+		// 	toplistalive++
+		// }
+		if data.GuardLevel > 0 {
 			toplistalive++
 		}
 		svcCtx.OtherSideUid[data.Uid] = true
@@ -146,7 +149,7 @@ func handlerPK(roomid int, svcCtx *svc.ServiceContext) {
 		}
 		for _, data := range rankListInfo.Data.OnlineRankItem {
 			// logx.Info(">>>>>>>", data)
-			if _, ok := svcCtx.TopUid[data.Uid]; ok {
+			if data.GuardLevel > 0 {
 				toplistalive++
 			}
 			svcCtx.OtherSideUid[data.Uid] = true
@@ -157,7 +160,6 @@ func handlerPK(roomid int, svcCtx *svc.ServiceContext) {
 	//PushToBulletSender(fmt.Sprintf("当前对手:%v，%v船，%v粉,对面有%v名船长在线，高能榜%v人，榜前50贡献%v分", userinfo.Data.Info.Uname, listInfo.Data.Info.Num, userinfo.Data.FollowerNum, toplistalive, rankListInfo.Data.OnlineNum, rankcount))
 	PushToBulletSender(fmt.Sprintf("当前对手:%v", userinfo.Data.Info.Uname))
 	PushToBulletSender(fmt.Sprintf("共%v船，%v粉", listInfo.Data.Info.Num, userinfo.Data.FollowerNum))
-	//PushToBulletSender(fmt.Sprintf("对面有%v船在线，高能榜%v人", toplistalive, rankListInfo.Data.OnlineNum))
-	PushToBulletSender(fmt.Sprintf("当前高能榜%v人", rankListInfo.Data.OnlineNum))
+	PushToBulletSender(fmt.Sprintf("当前%v船在线，高能榜%v人", toplistalive, rankListInfo.Data.OnlineNum))
 	PushToBulletSender(fmt.Sprintf("榜前50贡献%v分", rankcount))
 }

@@ -2,10 +2,14 @@ package logic
 
 import (
 	"context"
-	"github.com/zeromicro/go-zero/core/logx"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/xbclub/BilibiliDanmuRobot-Core/entity"
+	"github.com/xbclub/BilibiliDanmuRobot-Core/svc"
+	"github.com/zeromicro/go-zero/core/logx"
 )
 
 var interractGiver *InterractGiver
@@ -17,15 +21,16 @@ type InterractGiver struct {
 	interractChan chan *InterractData
 }
 type InterractData struct {
-	Uid int64
-	Msg string
+	Uid   int64
+	Msg   string
+	Reply *entity.DanmuMsgTextReplyInfo
 }
 
 func PushToInterractChan(g *InterractData) {
 	interractGiver.interractChan <- g
 }
 
-func Interact(ctx context.Context) {
+func Interact(ctx context.Context, svcCtx *svc.ServiceContext) {
 
 	interractGiver = &InterractGiver{
 		interractFilter: map[int64]time.Time{},
@@ -70,7 +75,14 @@ func Interact(ctx context.Context) {
 			} else {
 				parts := strings.Split(g.Msg, "\n")
 				for _, s := range parts {
-					PushToBulletSender(s)
+					if svcCtx.Config.WelcomeUseAt {
+						g.Reply = &entity.DanmuMsgTextReplyInfo{
+							ReplyUid: strconv.FormatInt(g.Uid, 10),
+						}
+						PushToBulletSender(s, g.Reply)
+					} else {
+						PushToBulletSender(s)
+					}
 					logx.Debug(s)
 				}
 				interractGiver.interractFilter[g.Uid] = time.Now()

@@ -76,22 +76,26 @@ func StartDanmuLogic(ctx context.Context, svcCtx *svc.ServiceContext) {
 			if len(danmumsg) > 0 && uid != svcCtx.RobotID {
 				// 机器人相关
 				go DoDanmuProcess(danmumsg, svcCtx, reply)
-				// 签到
-				if svcCtx.Config.SignInEnable {
-					go DosignInProcess(danmumsg, uid, from[1].(string), svcCtx, reply)
-				}
+				// 弹幕统计
 				if svcCtx.Config.DanmuCntEnable {
 					go BadgeActiveCheckProcess(danmumsg, uid, from[1].(string), svcCtx, reply)
-				}
-				// 抽签
-				if svcCtx.Config.DrawByLot {
-					go DodrawByLotProcess(danmumsg, from[1].(string), svcCtx, reply)
-
 				}
 				// 关键词回复
 				if svcCtx.Config.KeywordReply {
 					go KeywordReply(danmumsg, svcCtx, reply)
 				}
+			}
+			// 签到
+			if svcCtx.Config.SignInEnable {
+				go DosignInProcess(danmumsg, uid, from[1].(string), svcCtx, reply)
+			}
+			// 抽签
+			if svcCtx.Config.DrawByLot {
+				go DodrawByLotProcess(danmumsg, from[1].(string), svcCtx, reply)
+			}
+			// 盲盒统计
+			if svcCtx.Config.BlindBoxStat {
+				go DoBlindBoxStat(danmumsg, uid, from[1].(string), svcCtx, reply)
 			}
 			if len(danmumsg) > 0 && uid == strconv.FormatInt(svcCtx.UserID, 10) {
 				// 主播指令控制

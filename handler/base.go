@@ -216,7 +216,7 @@ func (w *wsHandler) startLogic() {
 	logx.Info("弹幕机器人已开启")
 	// 特效欢迎
 	w.ineterractCtx, w.ineterractCancel = context.WithCancel(context.Background())
-	go logic.Interact(w.ineterractCtx)
+	go logic.Interact(w.ineterractCtx, w.svc)
 
 	logx.Info("欢迎模块已开启")
 

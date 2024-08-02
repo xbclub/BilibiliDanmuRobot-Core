@@ -38,6 +38,7 @@ type Config struct {
 
 	// 欢迎配置
 	InteractWord       bool       `json:",default=false"`         // 欢迎弹幕开关
+	WelcomeUseAt       bool       `json:",default=false"`         // 使用@模式欢迎
 	WelcomeDanmu       []string   `json:",default='欢迎 {user} ~'"` // 欢迎语列表
 	InteractWordByTime bool       `json:",default=false"`         // 按时间段欢迎
 	WelcomeDanmuByTime []struct { // 分时段欢迎配置列表
@@ -79,14 +80,13 @@ type Config struct {
 	DrawLotsList []string `json:",optional,default=[恭喜您抽到吉签，好运常伴，心想事成！,恭喜您获得上上签，一帆风顺，万事如意！,喜获佳签，吉星高照，未来可期！,抽到福签，福运亨通，好事连连！,吉签在手，好运相随，笑口常开！,恭喜您抽中好签，好运不断，步步高升！,喜得吉签，好运自来，前程似锦！,抽到吉签啦，事事顺心，幸福安康！,恭喜您抽中如意签，心想事成，万事如意！,喜获吉祥签，好运连连，快乐无边！,抽到小凶签，近期小心行事。,遗憾，下签，请保持警惕。,不吉之签，需谨慎处理。,抽到凶签，冷静应对挑战。,抽到稍逊签，行事需谨慎。,抽到小凶签，请留意周围事物。,抽到下签，调整心态面对。,运势不佳，努力克服困难。,抽到下下签，但也请信心面对未来。,我是签，抽我抽我]"` // 抽签话术列表
 
 	// 签到设置
-	SignInEnable bool   `json:",default=true"` // 签到
+	SignInEnable bool `json:",default=true"` // 签到
+	// 弹幕计数设置
+	DanmuCntEnable bool `json:",default=false"` // 弹幕统计提醒功能
+	// 盲盒统计
+	BlindBoxStat bool   `json:",default=true"` // 盲盒统计开关(只影响是否输出结果, 不影响记录)
 	DBPath       string `json:",default=./db"`
 	DBName       string `json:",default=sqliteDataBase.db"`
-
-	// 弹幕计数设置
-	DanmuCntEnable bool   `json:",default=true"` // 弹幕统计提醒功能
-	DanmuCntDBPath string `json:",default=./db"`
-	DanmuCntDBName string `json:",default=DanmuCntSqliteDataBase.db"`
 
 	// 杂项设置 GUI无界面配置
 	CustomizeBullet bool `json:",default=false"` // 手动弹幕发送(命令行)	GUI不要有选项
