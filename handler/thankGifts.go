@@ -43,7 +43,11 @@ func (w *wsHandler) thankGifts() {
 				data.Data.ContentSegments[2].Text == "大航海盲盒" {
 
 				logic.PushToBulletSender(fmt.Sprintf("感谢 %s 的 %s", data.Data.ContentSegments[0].Text, data.Data.ContentSegments[4].Text))
+			} else if len(data.Data.ContentSegments) == 6 &&
+				data.Data.ContentSegments[2].Text == "投喂" &&
+				data.Data.ContentSegments[3].Text == "大航海盲盒" {
 
+				logic.PushToBulletSender(fmt.Sprintf("感谢 %s 的 %s", data.Data.ContentSegments[1].Text, data.Data.ContentSegments[5].Text))
 			}
 		}
 	})
