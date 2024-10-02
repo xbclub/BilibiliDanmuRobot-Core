@@ -40,11 +40,7 @@ func NewDanmuCntModel(conn *gorm.DB, RoomID int64) DanmuCntModel {
 }
 
 func (m *defaultDanmuCntModel) GetDateStr(daysFromToday int) string {
-	beijingLocation, err1 := time.LoadLocation("Asia/Shanghai")
-	if err1 != nil {
-		logx.Error(err1)
-	}
-	dateStr := time.Now().In(beijingLocation).AddDate(0, 0, -daysFromToday).Format("2006-01-02")
+	dateStr := time.Now().AddDate(0, 0, -daysFromToday).Format("2006-01-02")
 	logx.Info(dateStr)
 	return dateStr
 }
