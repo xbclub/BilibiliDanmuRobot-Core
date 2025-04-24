@@ -5,3 +5,5 @@
 go mod tidy
 go run test/test.go
 ```
+### 鸣谢
+https://github.com/Akegarasu/blivedm-go
