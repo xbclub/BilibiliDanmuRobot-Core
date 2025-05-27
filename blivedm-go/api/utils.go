@@ -2,7 +2,6 @@ package api
 
 import (
 	"encoding/json"
-	"fmt"
 	"io"
 	"net/http"
 )
@@ -41,7 +40,7 @@ func GetJson(url string, result interface{}) error {
 
 func GetJsonWithHeader(url string, headers *http.Header, result interface{}) error {
 	req, err := http.NewRequest("GET", url, nil)
-	fmt.Println(headers)
+	//fmt.Println(headers)
 	headers.Set("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0")
 	req.Header = *headers
 	c := &http.Client{}
