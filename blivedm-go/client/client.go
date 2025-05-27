@@ -22,6 +22,7 @@ type Client struct {
 	Uid                 int
 	Buvid               string
 	Cookie              string
+	WbiMixinKey         string
 	token               string
 	host                string
 	hostList            []string
@@ -58,11 +59,12 @@ func (c *Client) init() error {
 			log.Errorf("cannot found account token")
 			return errors.New("账号未登录")
 		}
-		uid, err := api.GetUid(c.Cookie)
+		uid, wbiMixinKey, err := api.GetUid(c.Cookie)
 		if err != nil {
 			log.Error(err)
 		}
 		c.Uid = uid
+		c.WbiMixinKey = wbiMixinKey
 		re := regexp.MustCompile("_uuid=(.+?);")
 		result := re.FindAllStringSubmatch(c.Cookie, -1)
 		if len(result) > 0 {
@@ -76,8 +78,8 @@ func (c *Client) init() error {
 	}
 	c.RoomID = roomInfo.Data.RoomId
 	if c.host == "" {
-		info, err := api.GetDanmuInfo(c.RoomID, c.Cookie)
-		if err != nil {
+		info, err := api.GetDanmuInfo(c.RoomID, c.Cookie, c.WbiMixinKey)
+		if err != nil || info == nil || info.Data.HostList == nil {
 			c.hostList = []string{"broadcastlv.chat.bilibili.com"}
 		} else {
 			for _, h := range info.Data.HostList {
