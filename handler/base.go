@@ -127,8 +127,8 @@ type WsHandler interface {
 	InitStartWsClient()
 	StopWsClient()
 	SayGoodbye()
-	StopChanel() error
-	StartWsClient()
+	StopChanel()
+	StartWsClient() error
 	starthttp() error
 	ReloadConfig() error
 	GetSvc() svc.ServiceContext
