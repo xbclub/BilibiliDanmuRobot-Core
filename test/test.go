@@ -15,7 +15,7 @@ func main() {
 	cls := handler.NewWsHandler()
 
 	if cls != nil {
-		cls.StartWsClient()
+		cls.InitStartWsClient()
 	} else {
 		fmt.Println("cls is nil")
 	}

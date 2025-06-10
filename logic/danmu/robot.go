@@ -34,6 +34,10 @@ func DoDanmuProcess(msg string, svcCtx *svc.ServiceContext, reply ...*entity.Dan
 		logic.PushToBulletSender("发送「抽签」即可抽签")
 		logic.PushToBulletSender("主播发送「关闭欢迎弹幕」即可关闭欢迎弹幕")
 		logic.PushToBulletSender("主播发送「开启欢迎弹幕」即可开启欢迎弹幕")
+		logic.PushToBulletSender("本软件为永久免费软件")
+	}
+	if strings.Compare("@作者", msg) == 0 {
+		logic.PushToBulletSender("作者为@超凶一只花酱酱")
 	}
 
 	result := checkIsAtMe(&msg, svcCtx)

@@ -49,6 +49,7 @@ type wsHandler struct {
 	corndanmu           *cron.Cron
 	mapCronDanmuSendIdx map[int]int
 	userId              int
+	initStart           bool
 }
 
 func NewWsHandler() WsHandler {
@@ -57,6 +58,7 @@ func NewWsHandler() WsHandler {
 		return nil
 	}
 	ws := new(wsHandler)
+	ws.initStart = false
 	err = ws.starthttp()
 	if err != nil {
 		logx.Error(err)
@@ -122,16 +124,17 @@ func (ws *wsHandler) ReloadConfig() error {
 }
 
 type WsHandler interface {
-	StartWsClient() error
+	InitStartWsClient() error
 	StopWsClient()
 	SayGoodbye()
+	StopChanel()
 	starthttp() error
 	ReloadConfig() error
 	GetSvc() svc.ServiceContext
 	GetUserinfo() *entity.UserinfoLite
 }
 
-func (w *wsHandler) StartWsClient() error {
+func (w *wsHandler) InitStartWsClient() error {
 	w.startLogic()
 	if w.svc.Config.EntryMsg != "off" {
 		err := http.Send(w.svc.Config.EntryMsg, w.svc)
@@ -139,6 +142,17 @@ func (w *wsHandler) StartWsClient() error {
 			logx.Error(err)
 		}
 	}
+	w.initStart = true
+	return w.client.Start()
+}
+func (w *wsHandler) StartWsClient() error {
+	if w.svc.Config.EntryMsg != "off" {
+		err := http.Send(w.svc.Config.EntryMsg, w.svc)
+		if err != nil {
+			logx.Error(err)
+		}
+	}
+	w.corndanmu.Start()
 	return w.client.Start()
 }
 func (w *wsHandler) GetUserinfo() *entity.UserinfoLite {
@@ -148,6 +162,11 @@ func (w *wsHandler) GetSvc() svc.ServiceContext {
 	return *w.svc
 }
 func (w *wsHandler) StopWsClient() {
+	w.corndanmu.Stop()
+	w.client.Stop()
+	//w.svc.Db.Db.Close()
+}
+func (w *wsHandler) StopChanel() {
 	if w.sendBulletCancel != nil {
 		w.sendBulletCancel()
 	}
@@ -169,9 +188,6 @@ func (w *wsHandler) StopWsClient() {
 	for _, i := range w.corndanmu.Entries() {
 		w.corndanmu.Remove(i.ID)
 	}
-	w.corndanmu.Stop()
-	w.client.Stop()
-	//w.svc.Db.Db.Close()
 }
 func (w *wsHandler) SayGoodbye() {
 	if len(w.svc.Config.GoodbyeInfo) > 0 {
