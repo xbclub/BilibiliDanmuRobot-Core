@@ -63,6 +63,7 @@ func Send(msg string, svcCtx *svc.ServiceContext, reply ...*entity.DanmuMsgTextR
 			logx.Errorf("请求send失败：%v", err)
 			return err
 		}
+		logx.Info(string(data))
 		err = json.Unmarshal(data, respdata)
 		if err != nil {
 			logx.Errorf("send弹幕响应解析失败:%v", err)
