@@ -61,7 +61,7 @@ func (c *Client) init() error {
 		}
 		uid, wbiMixinKey, err := api.GetUid(c.Cookie)
 		if err != nil {
-			log.Error(err)
+			return errors.New(fmt.Sprintf("get uid error: %v", err))
 		}
 		c.Uid = uid
 		c.WbiMixinKey = wbiMixinKey
@@ -74,7 +74,7 @@ func (c *Client) init() error {
 	roomInfo, err := api.GetRoomInfo(c.RoomID)
 	// 失败降级
 	if err != nil || roomInfo.Code != 0 {
-		log.Errorf("room=%s init GetRoomInfo fialed, %s", c.RoomID, err)
+		return errors.New(fmt.Sprintf("room=%s init GetRoomInfo fialed, %s", c.RoomID, err))
 	}
 	c.RoomID = roomInfo.Data.RoomId
 	if c.host == "" {
