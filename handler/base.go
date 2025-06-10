@@ -124,7 +124,7 @@ func (ws *wsHandler) ReloadConfig() error {
 }
 
 type WsHandler interface {
-	InitStartWsClient() error
+	InitStartWsClient()
 	StopWsClient()
 	SayGoodbye()
 	StopChanel() error
@@ -135,16 +135,8 @@ type WsHandler interface {
 	GetUserinfo() *entity.UserinfoLite
 }
 
-func (w *wsHandler) InitStartWsClient() error {
+func (w *wsHandler) InitStartWsClient() {
 	w.startLogic()
-	if w.svc.Config.EntryMsg != "off" {
-		err := http.Send(w.svc.Config.EntryMsg, w.svc)
-		if err != nil {
-			logx.Error(err)
-		}
-	}
-	w.initStart = true
-	return w.client.Start()
 }
 func (w *wsHandler) StartWsClient() error {
 	if w.svc.Config.EntryMsg != "off" {
