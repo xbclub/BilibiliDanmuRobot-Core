@@ -146,6 +146,9 @@ func (w *wsHandler) StartWsClient() error {
 		}
 	}
 	w.corndanmu.Start()
+	w.client = client.NewClient(w.svc.Config.RoomId)
+	w.client.SetCookie(http.CookieStr)
+	w.registerHandler()
 	return w.client.Start()
 }
 func (w *wsHandler) GetUserinfo() *entity.UserinfoLite {
@@ -244,7 +247,7 @@ func (w *wsHandler) startLogic() {
 	//定时弹幕
 	w.corndanmuStart()
 
-	w.registerHandler()
+	//w.registerHandler()
 }
 func (w *wsHandler) registerHandler() {
 	w.welcomeEntryEffect()
