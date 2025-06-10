@@ -127,7 +127,7 @@ type WsHandler interface {
 	InitStartWsClient() error
 	StopWsClient()
 	SayGoodbye()
-	StopChanel()
+	StopChanel() error
 	StartWsClient()
 	starthttp() error
 	ReloadConfig() error
