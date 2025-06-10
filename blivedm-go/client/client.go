@@ -117,7 +117,6 @@ func (c *Client) wsLoop() {
 	for {
 		select {
 		case <-c.done:
-			log.Debug("current client closed")
 			return
 		default:
 			msgType, data, err := c.conn.ReadMessage()
