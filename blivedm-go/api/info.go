@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/tidwall/gjson"
+	log "github.com/zeromicro/go-zero/core/logx"
 	"net/http"
 	"net/url"
 	"regexp"
@@ -152,6 +153,28 @@ func toWbiParamSafe(params string, wbiMixinKey string) string {
 	return valuesEncoded + "&w_rid=" + md5Hash
 }
 
+type BuvidData struct {
+	Code int `json:"code"`
+	Data struct {
+		B3 string `json:"b_3"`
+		B4 string `json:"b_4"`
+	} `json:"data"`
+	Message string `json:"message"`
+}
+
+func GetBuvid3A4() (buvid3, buvid4 string, err error) {
+	headers := &http.Header{}
+	roomIDurl := "https://api.bilibili.com/x/frontend/finger/spi"
+	result := &BuvidData{}
+	err = GetJsonWithHeader(roomIDurl, headers, result)
+	if err != nil {
+		return "", "", err
+	}
+	if result.Code != 0 {
+		return "", "", errors.New(result.Message)
+	}
+	return result.Data.B3, result.Data.B4, nil
+}
 func GetDanmuInfo(roomID int, cookie string, wbiMixinKey string) (*DanmuInfo, error) {
 	result := &DanmuInfo{}
 	headers := &http.Header{}
@@ -167,6 +190,9 @@ func GetDanmuInfo(roomID int, cookie string, wbiMixinKey string) (*DanmuInfo, er
 		return nil, err
 	}
 	if result.Code == -352 {
+		log.Errorf("request data: %+v", roomIDurl)
+		log.Errorf("header data: %+v", headers)
+		log.Errorf("response data: %+v", result)
 		return nil, errors.New("触发风控")
 	}
 	return result, nil

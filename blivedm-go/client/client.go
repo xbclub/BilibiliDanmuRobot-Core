@@ -70,7 +70,13 @@ func (c *Client) init() error {
 		if len(result) > 0 {
 			c.Buvid = result[0][1]
 		}
+		b3, _, err := api.GetBuvid3A4()
+		if err != nil {
+			return err
+		}
+		c.Cookie += fmt.Sprintf("buvid3=%s", b3)
 	}
+
 	roomInfo, err := api.GetRoomInfo(c.RoomID)
 	// 失败降级
 	if err != nil || roomInfo.Code != 0 {
@@ -80,6 +86,7 @@ func (c *Client) init() error {
 	if c.host == "" {
 		info, err := api.GetDanmuInfo(c.RoomID, c.Cookie, c.WbiMixinKey)
 		if err != nil || info == nil || info.Data.HostList == nil {
+			log.Errorf("get DanmuInfo error: %v", err)
 			c.hostList = []string{"broadcastlv.chat.bilibili.com"}
 		} else {
 			for _, h := range info.Data.HostList {
