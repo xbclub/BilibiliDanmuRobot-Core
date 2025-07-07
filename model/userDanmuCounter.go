@@ -41,7 +41,6 @@ func NewDanmuCntModel(conn *gorm.DB, RoomID int64) DanmuCntModel {
 
 func (m *defaultDanmuCntModel) GetDateStr(daysFromToday int) string {
 	dateStr := time.Now().AddDate(0, 0, -daysFromToday).Format("2006-01-02")
-	logx.Info(dateStr)
 	return dateStr
 }
 
