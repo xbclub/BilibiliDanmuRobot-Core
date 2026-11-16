@@ -87,6 +87,9 @@ func NewWsHandler() WsHandler {
 		//return nil
 	}
 	ctx.UserID = roominfo.Data.Uid
+	if userinfo, err := http.Userinfo(ctx.Config.RoomId); err == nil && userinfo != nil {
+		ctx.AnchorName = userinfo.Data.Info.Uname
+	}
 	return ws
 }
 func (ws *wsHandler) ReloadConfig() error {
@@ -187,30 +190,12 @@ func (w *wsHandler) StopChanel() {
 }
 func (w *wsHandler) SayGoodbye() {
 	if len(w.svc.Config.GoodbyeInfo) > 0 {
-
-		var danmuLen = w.svc.Config.DanmuLen
-		var msgdata []string
-		msgrun := []rune(w.svc.Config.GoodbyeInfo)
-		msgLen := len(msgrun)
-		msgcount := msgLen / danmuLen
-		tmpmsgcount := msgLen % danmuLen
-		if tmpmsgcount != 0 {
-			msgcount += 1
-		}
-		for m := 1; m <= msgcount; m++ {
-			if msgLen < m*danmuLen {
-				msgdata = append(msgdata, string(msgrun[(m-1)*danmuLen:msgLen]))
-				continue
-			}
-			msgdata = append(msgdata, string(msgrun[(m-1)*danmuLen:danmuLen*m]))
-		}
-		for _, msgs := range msgdata {
+		for _, msgs := range logic.SplitMessage(w.svc.Config.GoodbyeInfo, w.svc.Config.DanmuLen) {
 			err := http.Send(msgs, w.svc)
 			if err != nil {
 				logx.Errorf("下播弹幕发送失败：%s msg: %s", err, msgs)
 			}
 			time.Sleep(1 * time.Second) // 防止弹幕发送过快
-			// logx.Info(">>>>>>>>>", msgs)
 		}
 	}
 }

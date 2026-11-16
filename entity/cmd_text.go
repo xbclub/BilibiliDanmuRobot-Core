@@ -85,9 +85,18 @@ type EntryEffectText struct {
 
 type InteractWordText struct {
 	Data struct {
-		Uname   string `json:"uname"`
-		Uid     int64  `json:"uid"`
-		MsgType int32  `json:"msg_type"`
+		Uname     string         `json:"uname"`
+		Uid       int64          `json:"uid"`
+		MsgType   int32          `json:"msg_type"`
+		FansMedal *FansMedalInfo `json:"fans_medal"`
+	} `json:"data"`
+}
+
+type InteractWordV2Text struct {
+	Cmd  string `json:"cmd"`
+	Data struct {
+		Dmscore int    `json:"dmscore"`
+		Pb      string `json:"pb"`
 	} `json:"data"`
 }
 

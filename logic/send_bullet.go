@@ -37,23 +37,7 @@ func StartSendBullet(ctx context.Context, svcCtx *svc.ServiceContext) {
 			goto END
 		case bullet := <-sender.bulletChan:
 			msg = bullet.Msg
-			var danmuLen = svcCtx.Config.DanmuLen
-			var msgdata []string
-			msgrun := []rune(msg)
-			msgLen := len(msgrun)
-			msgcount := msgLen / danmuLen
-			tmpmsgcount := msgLen % danmuLen
-			if tmpmsgcount != 0 {
-				msgcount += 1
-			}
-			for m := 1; m <= msgcount; m++ {
-				if msgLen < m*danmuLen {
-					msgdata = append(msgdata, string(msgrun[(m-1)*danmuLen:msgLen]))
-					continue
-				}
-				msgdata = append(msgdata, string(msgrun[(m-1)*danmuLen:danmuLen*m]))
-			}
-			for _, msgs := range msgdata {
+			for _, msgs := range SplitMessage(msg, svcCtx.Config.DanmuLen) {
 				if err := http.Send(msgs, svcCtx, bullet.Reply...); err != nil {
 					logx.Errorf("弹幕发送失败：%s msg: %s", err, msgs)
 				} else {
