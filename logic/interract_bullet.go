@@ -14,6 +14,9 @@ import (
 
 var interractGiver *InterractGiver
 
+// B 站弹幕实际约 3 秒一条，欢迎队列留 0.5 秒宽限
+const welcomeInterval = 3500 * time.Millisecond
+
 type InterractGiver struct {
 	interractFilter map[int64]time.Time
 	locked          *sync.Mutex
@@ -40,6 +43,7 @@ func Interact(ctx context.Context, svcCtx *svc.ServiceContext) {
 	}
 
 	var g *InterractData
+	var lastWelcome time.Time
 	var w = 10 * time.Second
 	var t = time.NewTimer(w)
 	defer t.Stop()
@@ -71,8 +75,12 @@ func Interact(ctx context.Context, svcCtx *svc.ServiceContext) {
 			//interractGiver.tmpmsg = append(interractGiver.tmpmsg, *g)
 			interractGiver.locked.Lock()
 			if value, ok := interractGiver.interractFilter[g.Uid]; ok && value.Add(w).Unix() >= time.Now().Unix() {
-				logx.Debugf("用户 %v 10秒内重复欢迎已被过滤", g.Uid)
+				logx.Infof("用户 %v 10秒内重复欢迎已被过滤", g.Uid)
 			} else {
+				if wait := welcomeWait(lastWelcome, time.Now(), welcomeInterval); wait > 0 {
+					logx.Infof("欢迎队列等待 %.1fs: uid=%v", wait.Seconds(), g.Uid)
+					time.Sleep(wait)
+				}
 				parts := strings.Split(g.Msg, "\n")
 				for _, s := range parts {
 					if svcCtx.Config.WelcomeUseAt {
@@ -85,6 +93,7 @@ func Interact(ctx context.Context, svcCtx *svc.ServiceContext) {
 					}
 					logx.Debug(s)
 				}
+				lastWelcome = time.Now()
 				interractGiver.interractFilter[g.Uid] = time.Now()
 			}
 			interractGiver.locked.Unlock()
@@ -92,4 +101,14 @@ func Interact(ctx context.Context, svcCtx *svc.ServiceContext) {
 		}
 	}
 END:
+}
+
+func welcomeWait(last, now time.Time, interval time.Duration) time.Duration {
+	if last.IsZero() {
+		return 0
+	}
+	if wait := interval - now.Sub(last); wait > 0 {
+		return wait
+	}
+	return 0
 }

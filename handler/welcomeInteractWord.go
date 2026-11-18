@@ -1,112 +1,218 @@
 package handler
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/xbclub/BilibiliDanmuRobot-Core/entity"
-	"github.com/xbclub/BilibiliDanmuRobot-Core/logic"
-	"github.com/xbclub/BilibiliDanmuRobot-Core/svc"
-	"github.com/zeromicro/go-zero/core/logx"
 	"math/rand"
 	"sort"
 	"strconv"
 	"strings"
 	"time"
-)
 
-var random = rand.New(rand.NewSource(time.Now().UnixMilli()))
+	"github.com/xbclub/BilibiliDanmuRobot-Core/entity"
+	"github.com/xbclub/BilibiliDanmuRobot-Core/logic"
+	"github.com/xbclub/BilibiliDanmuRobot-Core/svc"
+	"github.com/zeromicro/go-zero/core/logx"
+)
 
 func (w *wsHandler) welcomeInteractWord() {
 	w.client.RegisterCustomEventHandler("INTERACT_WORD", func(s string) {
-		interact := &entity.InteractWordText{}
-		_ = json.Unmarshal([]byte(s), interact)
-		// 1 进场 2 关注 3 分享 5(互关)
-		if interact.Data.MsgType == 1 {
-			if !w.svc.Config.InteractSelf && strconv.Itoa(int(interact.Data.Uid)) == w.svc.RobotID {
-				return
-			}
-			if !w.svc.Config.InteractAnchor && interact.Data.Uid == w.svc.UserID {
-				return
-			}
-
-			if v, ok := w.svc.Config.WelcomeString[fmt.Sprint(interact.Data.Uid)]; w.svc.Config.WelcomeSwitch && ok {
-				logic.PushToInterractChan(&logic.InterractData{
-					Uid: interact.Data.Uid,
-					Msg: v,
-				})
-			} else if w.svc.Config.InteractWord {
-				// 不在黑名单才欢迎
-				if !inWide(interact.Data.Uname, w.svc.Config.WelcomeBlacklistWide) &&
-					!in(interact.Data.Uname, w.svc.Config.WelcomeBlacklist) {
-					if w.svc.Config.InteractWordByTime {
-						msg := handleInterractByTime(interact.Data.Uid, welcomeInteract(interact.Data.Uname), w.svc)
-						logx.Debug(msg)
-						logic.PushToInterractChan(&logic.InterractData{
-							Uid: interact.Data.Uid,
-							Msg: msg,
-						})
-					} else {
-						msg := handleInterract(interact.Data.Uid, welcomeInteract(interact.Data.Uname), w.svc)
-						ms := strings.Split(msg, "\n")
-						if len(ms) > 1 {
-							for i, s := range ms {
-								logic.PushToInterractChan(&logic.InterractData{
-									Uid: interact.Data.Uid + int64(i),
-									Msg: s,
-								})
-							}
-						} else {
-							logic.PushToInterractChan(&logic.InterractData{
-								Uid: interact.Data.Uid,
-								Msg: msg,
-							})
-						}
-					}
-				}
-			}
-		} else if interact.Data.MsgType == 2 || interact.Data.MsgType == 5 {
-			if w.svc.Config.ThanksFocus {
-				if len(interact.Data.Uname) == 0 {
-					return
-				}
-				msg := ""
-				if w.svc.Config.WelcomeUseAt {
-					msg = "感谢关注!" + w.svc.Config.FocusDanmu[random.Intn(len(w.svc.Config.FocusDanmu))]
-					logic.PushToBulletSender(msg, &entity.DanmuMsgTextReplyInfo{
-						ReplyUid: strconv.FormatInt(interact.Data.Uid, 10),
-					})
-				} else {
-					msg := "感谢 " + shortName(interact.Data.Uname, 8, w.svc.Config.DanmuLen) + " 的关注!"
-					logic.PushToBulletSender(msg)
-					if w.svc.Config.FocusDanmu != nil && len(w.svc.Config.FocusDanmu) > 0 {
-						logic.PushToBulletSender(w.svc.Config.FocusDanmu[random.Intn(len(w.svc.Config.FocusDanmu))])
-					}
-				}
-			}
-		} else if interact.Data.MsgType == 3 {
-			if w.svc.Config.ThanksShare {
-				if len(interact.Data.Uname) == 0 {
-					return
-				}
-				msg := ""
-				if w.svc.Config.WelcomeUseAt {
-					msg = "感谢分享!" + w.svc.Config.FocusDanmu[random.Intn(len(w.svc.Config.FocusDanmu))]
-					logic.PushToBulletSender(msg, &entity.DanmuMsgTextReplyInfo{
-						ReplyUid: strconv.FormatInt(interact.Data.Uid, 10),
-					})
-				} else {
-					msg = "感谢 " + shortName(interact.Data.Uname, 8, w.svc.Config.DanmuLen) + " 的分享!"
-					logic.PushToBulletSender(msg)
-					if w.svc.Config.FocusDanmu != nil && len(w.svc.Config.FocusDanmu) > 0 {
-						logic.PushToBulletSender(w.svc.Config.FocusDanmu[random.Intn(len(w.svc.Config.FocusDanmu))])
-					}
-				}
-			}
-		} else {
-			logx.Info(">>>>>>>>>>>>> 未识别的类型:", s)
+		var interact entity.InteractWordText
+		if err := json.Unmarshal([]byte(s), &interact); err != nil {
+			logx.Errorf("INTERACT_WORD 解析失败: %v", err)
+			return
 		}
+		w.handleInteractEvent(interact.Data.Uid, interact.Data.Uname, interact.Data.MsgType, interact.Data.FansMedal)
+	})
+	w.client.RegisterCustomEventHandler("INTERACT_WORD_V2", func(s string) {
+		var interact entity.InteractWordV2Text
+		if err := json.Unmarshal([]byte(s), &interact); err != nil {
+			logx.Errorf("INTERACT_WORD_V2 解析失败: %v", err)
+			return
+		}
+		if interact.Data.Pb == "" {
+			return
+		}
+		ev, err := entity.ParseInteractWordV2(interact.Data.Pb)
+		if err != nil {
+			logx.Errorf("INTERACT_WORD_V2 pb 解析失败: %v", err)
+			return
+		}
+		w.handleInteractEvent(ev.UID, ev.Uname, ev.MsgType, ev.FansMedal)
 	})
 }
+
+func (w *wsHandler) handleInteractEvent(uid int64, uname string, msgType int32, medal *entity.FansMedalInfo) {
+	if msgType == 1 {
+		logx.Infof("进场事件 uid=%v uname=%v", uid, uname)
+	}
+	switch msgType {
+	case 1:
+		w.handleEnter(uid, uname, medal)
+	case 2, 5:
+		w.handleFollow(uid, uname)
+	case 3:
+		w.handleShare(uid, uname)
+	default:
+		logx.Infof("未识别的互动类型: uid=%v uname=%v msg_type=%v", uid, uname, msgType)
+	}
+}
+
+func (w *wsHandler) handleEnter(uid int64, uname string, medal *entity.FansMedalInfo) {
+	if !w.svc.Config.InteractSelf && strconv.FormatInt(uid, 10) == w.svc.RobotID {
+		return
+	}
+	if !w.svc.Config.InteractAnchor && uid == w.svc.UserID {
+		return
+	}
+
+	if v, ok := w.svc.Config.WelcomeString[fmt.Sprint(uid)]; w.svc.Config.WelcomeSwitch && ok {
+		logic.PushToInterractChan(&logic.InterractData{Uid: uid, Msg: v})
+		return
+	}
+	if !w.svc.Config.InteractWord {
+		logx.Infof("进场跳过: InteractWord=false uid=%v uname=%v", uid, uname)
+		return
+	}
+	if inWide(uname, w.svc.Config.WelcomeBlacklistWide) || in(uname, w.svc.Config.WelcomeBlacklist) {
+		logx.Infof("进场跳过: 黑名单 uid=%v uname=%v", uid, uname)
+		return
+	}
+
+	name := welcomeInteract(uname)
+	if _, ok := w.svc.OtherSideUid[uid]; ok {
+		w.pushInteractMsg(uid, handleInterract(uid, name, w.svc))
+		return
+	}
+	if w.svc.Config.WelcomeTier {
+		if msg, ok := w.tierWelcome(uid, name, medal); ok {
+			w.pushInteractMsg(uid, msg)
+			return
+		}
+	}
+	if w.svc.Config.InteractWordByTime {
+		w.pushInteractMsg(uid, handleInterractByTime(uid, name, w.svc))
+		return
+	}
+	w.pushInteractMsg(uid, handleInterract(uid, name, w.svc))
+}
+
+func (w *wsHandler) pushInteractMsg(uid int64, msg string) {
+	parts := strings.Split(msg, "\n")
+	if len(parts) > 1 {
+		for i, s := range parts {
+			logic.PushToInterractChan(&logic.InterractData{Uid: uid + int64(i), Msg: s})
+		}
+		return
+	}
+	logic.PushToInterractChan(&logic.InterractData{Uid: uid, Msg: msg})
+}
+
+func (w *wsHandler) handleFollow(uid int64, uname string) {
+	if !w.svc.Config.ThanksFocus || len(uname) == 0 {
+		return
+	}
+	if w.svc.Config.WelcomeUseAt {
+		msg := "感谢关注!"
+		if len(w.svc.Config.FocusDanmu) > 0 {
+			msg += w.svc.Config.FocusDanmu[rand.Intn(len(w.svc.Config.FocusDanmu))]
+		}
+		logic.PushToBulletSender(msg, &entity.DanmuMsgTextReplyInfo{ReplyUid: strconv.FormatInt(uid, 10)})
+		return
+	}
+	msg := "感谢 " + shortName(uname, 8, w.svc.Config.DanmuLen) + " 的关注!"
+	logic.PushToBulletSender(msg)
+	if len(w.svc.Config.FocusDanmu) > 0 {
+		logic.PushToBulletSender(w.svc.Config.FocusDanmu[rand.Intn(len(w.svc.Config.FocusDanmu))])
+	}
+}
+
+func (w *wsHandler) handleShare(uid int64, uname string) {
+	if !w.svc.Config.ThanksShare || len(uname) == 0 {
+		return
+	}
+	if w.svc.Config.WelcomeUseAt {
+		msg := "感谢分享!"
+		if len(w.svc.Config.FocusDanmu) > 0 {
+			msg += w.svc.Config.FocusDanmu[rand.Intn(len(w.svc.Config.FocusDanmu))]
+		}
+		logic.PushToBulletSender(msg, &entity.DanmuMsgTextReplyInfo{ReplyUid: strconv.FormatInt(uid, 10)})
+		return
+	}
+	msg := "感谢 " + shortName(uname, 8, w.svc.Config.DanmuLen) + " 的分享!"
+	logic.PushToBulletSender(msg)
+	if len(w.svc.Config.FocusDanmu) > 0 {
+		logic.PushToBulletSender(w.svc.Config.FocusDanmu[rand.Intn(len(w.svc.Config.FocusDanmu))])
+	}
+}
+
+func (w *wsHandler) tierWelcome(uid int64, uname string, medal *entity.FansMedalInfo) (string, bool) {
+	if len(w.svc.Config.WelcomeFan) == 0 && len(w.svc.Config.WelcomeNew) == 0 && len(w.svc.Config.WelcomeBack) == 0 {
+		logx.Infof("三档欢迎: uid=%v uname=%v 三组模板均为空，回退旧逻辑", uid, uname)
+		return "", false
+	}
+	first := false
+	if w.svc.VisitModel != nil {
+		var err error
+		first, err = w.svc.VisitModel.Touch(context.Background(), uid, time.Now().Unix())
+		if err != nil {
+			logx.Errorf("记录进场失败 uid=%v: %v", uid, err)
+		}
+	}
+	isFan := w.isFan(medal)
+
+	var pool []string
+	tier := ""
+	switch {
+	case isFan && len(w.svc.Config.WelcomeFan) > 0:
+		pool = w.svc.Config.WelcomeFan
+		tier = "fan"
+	case first && len(w.svc.Config.WelcomeNew) > 0:
+		pool = w.svc.Config.WelcomeNew
+		tier = "new"
+	case !first && len(w.svc.Config.WelcomeBack) > 0:
+		pool = w.svc.Config.WelcomeBack
+		tier = "back"
+	default:
+		logx.Infof("三档欢迎: uid=%v uname=%v first=%v isFan=%v 无匹配模板，回退旧逻辑", uid, uname, first, isFan)
+		return "", false
+	}
+	logx.Infof("三档欢迎: uid=%v uname=%v first=%v isFan=%v tier=%s", uid, uname, first, isFan, tier)
+	return renderWelcome(pool[rand.Intn(len(pool))], uname, medal, w.svc), true
+}
+
+func (w *wsHandler) isFan(medal *entity.FansMedalInfo) bool {
+	if medal == nil || medal.MedalName == "" {
+		return false
+	}
+	if medal.TargetID == 0 || medal.TargetID != w.svc.UserID {
+		return false
+	}
+	return medal.MedalLevel >= int64(w.svc.Config.WelcomeFanMedalLevel)
+}
+
+func renderWelcome(tpl, uname string, medal *entity.FansMedalInfo, svcCtx *svc.ServiceContext) string {
+	name := uname
+	if svcCtx.Config.WelcomeUseAt {
+		tpl = strings.ReplaceAll(tpl, "{at}", "")
+	} else {
+		name = shortName(uname, 4, svcCtx.Config.DanmuLen)
+		tpl = strings.ReplaceAll(tpl, "{at}", "@"+name+" ")
+	}
+	medalName, medalLevel := "", ""
+	if medal != nil {
+		medalName = medal.MedalName
+		medalLevel = strconv.FormatInt(medal.MedalLevel, 10)
+	}
+	return strings.NewReplacer(
+		"{user}", name,
+		"{medal}", medalName,
+		"{medal_level}", medalLevel,
+		"{anchor}", svcCtx.AnchorName,
+	).Replace(tpl)
+}
+
 func inWide(target string, src []string) bool {
 	if src != nil {
 		for _, s := range src {
@@ -117,6 +223,7 @@ func inWide(target string, src []string) bool {
 	}
 	return false
 }
+
 func in(target string, src []string) bool {
 	if src != nil {
 		sort.Strings(src)
@@ -127,18 +234,9 @@ func in(target string, src []string) bool {
 }
 
 func handleInterractByTime(uid int64, uname string, svcCtx *svc.ServiceContext) string {
-
 	if _, ook := svcCtx.OtherSideUid[uid]; ook {
 		return handleInterract(uid, uname, svcCtx)
 	}
-	// 凌晨 - Early morning   2:00--5:00
-	// 早晨 - Morning   5:00--9:00
-	// 上午 - Late morning / Mid-morning  9:00--11:00
-	// 中午 - Noon  11:00--14:00
-	// 下午 - Afternoon 14:00 -- 20:00
-	// 晚上 - Evening / Night 20:00--00:00
-	// 午夜 - Midnight 00:00 -- 2:00
-	//s := []rune(uname)
 	r := "{user}"
 	rep := r + "\n"
 
@@ -151,7 +249,7 @@ func handleInterractByTime(uid int64, uname string, svcCtx *svc.ServiceContext) 
 		for _, danmuCfg := range svcCtx.Config.WelcomeDanmuByTime {
 			if danmuCfg.Key == key {
 				if danmuCfg.Enabled && len(danmuCfg.Danmu) > 0 {
-					szWelcomOrig := danmuCfg.Danmu[random.Intn(len(danmuCfg.Danmu))]
+					szWelcomOrig := danmuCfg.Danmu[rand.Intn(len(danmuCfg.Danmu))]
 
 					if svcCtx.Config.WelcomeUseAt {
 						rep = "，"
@@ -161,28 +259,25 @@ func handleInterractByTime(uid int64, uname string, svcCtx *svc.ServiceContext) 
 						szWelcomTmp = strings.ReplaceAll(szWelcomTmp, r+"，", rep)
 						szWelcomTmp = strings.ReplaceAll(szWelcomTmp, r, "")
 						return szWelcomTmp
-					} else {
-						welcome := strings.ReplaceAll(szWelcomOrig, r, shortName(uname, 3, svcCtx.Config.DanmuLen))
-						rWelcome := []rune(welcome)
-						if len(rWelcome) > svcCtx.Config.DanmuLen {
-							szWelcomTmp := strings.ReplaceAll(szWelcomOrig, r+", ", rep)
-							szWelcomTmp = strings.ReplaceAll(szWelcomTmp, r+",", rep)
-							szWelcomTmp = strings.ReplaceAll(szWelcomTmp, r+"，", rep)
-							return strings.ReplaceAll(szWelcomTmp, r, uname)
-						} else {
-							return welcome
-						}
 					}
-				} else {
-					return handleInterract(uid, uname, svcCtx)
+					welcome := strings.ReplaceAll(szWelcomOrig, r, shortName(uname, 3, svcCtx.Config.DanmuLen))
+					rWelcome := []rune(welcome)
+					if len(rWelcome) > svcCtx.Config.DanmuLen {
+						szWelcomTmp := strings.ReplaceAll(szWelcomOrig, r+", ", rep)
+						szWelcomTmp = strings.ReplaceAll(szWelcomTmp, r+",", rep)
+						szWelcomTmp = strings.ReplaceAll(szWelcomTmp, r+"，", rep)
+						return strings.ReplaceAll(szWelcomTmp, r, uname)
+					}
+					return welcome
 				}
+				return handleInterract(uid, uname, svcCtx)
 			}
 		}
 		return handleInterract(uid, uname, svcCtx)
-	} else {
-		return handleInterract(uid, uname, svcCtx)
 	}
+	return handleInterract(uid, uname, svcCtx)
 }
+
 func handleInterract(uid int64, uname string, svcCtx *svc.ServiceContext) string {
 	s := []rune(uname)
 	r := "{user}"
@@ -190,55 +285,49 @@ func handleInterract(uid int64, uname string, svcCtx *svc.ServiceContext) string
 	if _, ook := svcCtx.OtherSideUid[uid]; ook {
 		if svcCtx.Config.WelcomeUseAt {
 			return "欢迎过来串门~"
-		} else {
-			szWelcom := "欢迎  过来串门~"
-			maxLen := (svcCtx.Config.DanmuLen - len([]rune(szWelcom)))
-			if len(s) > maxLen && maxLen > 0 {
-				return "欢迎 " + string(s[0:maxLen-1]) + "… 过来串门~"
-			} else {
-				return "欢迎 " + uname + " 过来串门~"
-			}
 		}
-	} else {
-		szWelcomOrig := svcCtx.Config.WelcomeDanmu[random.Intn(len(svcCtx.Config.WelcomeDanmu))]
-
-		if svcCtx.Config.WelcomeUseAt {
-			rep = "，"
-			r = " {user}"
-			szWelcomTmp := strings.ReplaceAll(szWelcomOrig, r+", ", rep)
-			szWelcomTmp = strings.ReplaceAll(szWelcomTmp, r+",", rep)
-			szWelcomTmp = strings.ReplaceAll(szWelcomTmp, r+"，", rep)
-			szWelcomTmp = strings.ReplaceAll(szWelcomTmp, r, rep)
-			return szWelcomTmp
-		} else {
-			welcome := strings.ReplaceAll(szWelcomOrig, r, shortName(uname, 3, svcCtx.Config.DanmuLen))
-			rWelcome := []rune(welcome)
-			if len(rWelcome) > svcCtx.Config.DanmuLen {
-				szWelcomTmp := strings.ReplaceAll(szWelcomOrig, r+", ", rep)
-				szWelcomTmp = strings.ReplaceAll(szWelcomTmp, r+",", rep)
-				szWelcomTmp = strings.ReplaceAll(szWelcomTmp, r+"，", rep)
-				szWelcomTmp = strings.ReplaceAll(szWelcomTmp, r, rep)
-				return strings.ReplaceAll(szWelcomTmp, r, uname)
-			} else {
-				return welcome
-			}
+		szWelcom := "欢迎  过来串门~"
+		maxLen := (svcCtx.Config.DanmuLen - len([]rune(szWelcom)))
+		if len(s) > maxLen && maxLen > 0 {
+			return "欢迎 " + string(s[0:maxLen-1]) + "… 过来串门~"
 		}
+		return "欢迎 " + uname + " 过来串门~"
 	}
+	szWelcomOrig := svcCtx.Config.WelcomeDanmu[rand.Intn(len(svcCtx.Config.WelcomeDanmu))]
+
+	if svcCtx.Config.WelcomeUseAt {
+		rep = "，"
+		r = " {user}"
+		szWelcomTmp := strings.ReplaceAll(szWelcomOrig, r+", ", rep)
+		szWelcomTmp = strings.ReplaceAll(szWelcomTmp, r+",", rep)
+		szWelcomTmp = strings.ReplaceAll(szWelcomTmp, r+"，", rep)
+		szWelcomTmp = strings.ReplaceAll(szWelcomTmp, r, rep)
+		return szWelcomTmp
+	}
+	welcome := strings.ReplaceAll(szWelcomOrig, r, shortName(uname, 3, svcCtx.Config.DanmuLen))
+	rWelcome := []rune(welcome)
+	if len(rWelcome) > svcCtx.Config.DanmuLen {
+		szWelcomTmp := strings.ReplaceAll(szWelcomOrig, r+", ", rep)
+		szWelcomTmp = strings.ReplaceAll(szWelcomTmp, r+",", rep)
+		szWelcomTmp = strings.ReplaceAll(szWelcomTmp, r+"，", rep)
+		szWelcomTmp = strings.ReplaceAll(szWelcomTmp, r, rep)
+		return strings.ReplaceAll(szWelcomTmp, r, uname)
+	}
+	return welcome
 }
+
 func shortName(uname string, alreadyLen, danmuLen int) string {
 	s := []rune(uname)
 	maxLen := (danmuLen - alreadyLen)
 	if len(s) > maxLen && maxLen > 0 {
 		return string(s[0:maxLen-1]) + "…"
-	} else {
-		return uname
 	}
+	return uname
 }
+
 func welcomeInteract(name string) string {
 	if strings.Contains(name, "欢迎") {
-		name = strings.Replace(name, "欢迎", "", 1)
-		return name
-	} else {
-		return name
+		return strings.Replace(name, "欢迎", "", 1)
 	}
+	return name
 }
