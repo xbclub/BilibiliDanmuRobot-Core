@@ -8,7 +8,8 @@ import (
 	"github.com/xbclub/BilibiliDanmuRobot-Core/webprofile"
 )
 
-const (
+// UserAgent 由 webprofile 从 utls ClientHello profile 动态派生，非常量
+var (
 	UserAgent = webprofile.UserAgent
 	userAgent = UserAgent
 )
