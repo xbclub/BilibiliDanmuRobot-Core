@@ -42,6 +42,11 @@ func RoomInit(roomid int) (*entity.RoomInitInfo, error) {
 	if status.Code == 60004 {
 		return nil, errors.New("房间号不存在")
 	}
+	// 其他非零 code（如 -412 风控）不能静默返回零值结构，
+	// 否则调用方拿到 uid=0 的"成功"结果继续执行
+	if status.Code != 0 {
+		return nil, fmt.Errorf("room init 异常 code=%d", status.Code)
+	}
 	return r, err
 }
 

@@ -32,8 +32,10 @@ const visitRetention = 90 * 24 * 3600
 func NewVisitModel(conn *gorm.DB, roomID int64) VisitModel {
 	table := fmt.Sprintf("visit_%v", roomID)
 	if err := conn.Table(table).AutoMigrate(&VisitBase{}); err != nil {
-		// 建表失败说明数据库已不可用，静默继续只会让三档欢迎一直走回退路径
-		logx.Must(err)
+		// 与兄弟模型策略一致：记录错误返回 nil，三档欢迎判 nil 自动回退旧逻辑，
+		// 不在换房 reload 路径上杀死整个进程
+		logx.Errorf("visit 表迁移失败 table=%s: %v", table, err)
+		return nil
 	}
 	// 清理保留窗口外的旧记录，避免 per-room 表无限增长
 	if err := conn.Table(table).

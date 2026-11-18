@@ -34,7 +34,14 @@ type InterractData struct {
 }
 
 func PushToInterractChan(g *InterractData) {
-	interractGiver.interractChan <- g
+	// 非阻塞发送：欢迎队列有 3.5s/条的发送限速，大型房间进场风暴时
+	// 队列会积压，阻塞在这里会拖住事件分发 goroutine 并让欢迎延迟数十分钟；
+	// 满时丢弃当前这条并记日志，宁可少欢迎一条也不积压
+	select {
+	case interractGiver.interractChan <- g:
+	default:
+		logx.Errorf("欢迎队列已满（积压 %d 条），丢弃 uid=%v 的欢迎", len(interractGiver.interractChan), g.Uid)
+	}
 }
 
 // Run 启动欢迎弹幕去重 worker，同一用户 10 秒内只欢迎一次

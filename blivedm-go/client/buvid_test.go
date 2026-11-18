@@ -15,6 +15,8 @@ func TestBuvidFromCookie(t *testing.T) {
 		{"无 buvid3 回退 _uuid", "SESSDATA=x; _uuid=DEF", "DEF"},
 		{"buvid3 在串尾无分号", "SESSDATA=x; buvid3=ABC", "ABC"},
 		{"都没有返回空", "SESSDATA=x", ""},
+		{"前缀伪键不误判", "foo=xbuvid3=FAKE; buvid3=REAL", "REAL"},
+		{"无空格分号分隔", "SESSDATA=x;buvid3=ABC;_uuid=DEF", "ABC"},
 	}
 	for _, c := range cases {
 		if got := buvidFromCookie(c.cookie); got != c.want {
@@ -51,5 +53,10 @@ func TestAppendBuvidCookies(t *testing.T) {
 	}
 	if strings.Count(got, "buvid3") != 1 {
 		t.Fatalf("duplicate buvid3 keys: %q", got)
+	}
+	// 前缀伪键不算已存在（应追加真实 buvid3）
+	got = appendBuvidCookies("foo=xbuvid3=FAKE", "B3", "")
+	if got != "foo=xbuvid3=FAKE; buvid3=B3" {
+		t.Fatalf("prefix fake key: got %q", got)
 	}
 }

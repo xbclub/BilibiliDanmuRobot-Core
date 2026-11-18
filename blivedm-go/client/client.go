@@ -77,12 +77,18 @@ func (c *Client) SetCookie(cookie string) {
 	c.Cookie = cookie
 }
 
+// cookieHasKey 判断 cookie 串是否含指定键（带左边界，避免 xbuvid3= 之类前缀误判）
+func cookieHasKey(cookie, key string) bool {
+	re := regexp.MustCompile(`(?:^|;\s*)` + key + `=`)
+	return re.MatchString(cookie)
+}
+
 // buvidFromCookie 从 cookie 串中提取进房包 buvid 字段的值。
 // 优先取真实 buvid3（handler 层 ensureBuvid 已把 buvid3/buvid4 拼进 cookie），
-// 取不到再回退 _uuid；同时兼容「值后跟分号」与「值在串尾」两种写法。
+// 取不到再回退 _uuid；带左边界，兼容「值后跟分号」与「值在串尾」两种写法。
 func buvidFromCookie(cookie string) string {
 	for _, key := range []string{"buvid3", "_uuid"} {
-		re := regexp.MustCompile(key + `=([^;]+);?`)
+		re := regexp.MustCompile(`(?:^|;\s*)` + key + `=([^;]+);?`)
 		if m := re.FindStringSubmatch(cookie); len(m) > 1 && m[1] != "" {
 			return m[1]
 		}
@@ -94,10 +100,10 @@ func buvidFromCookie(cookie string) string {
 // 已存在的键不重复追加，避免同名 cookie 键导致新值被服务器忽略。
 func appendBuvidCookies(cookie, b3, b4 string) string {
 	var parts []string
-	if b3 != "" && !strings.Contains(cookie, "buvid3=") {
+	if b3 != "" && !cookieHasKey(cookie, "buvid3") {
 		parts = append(parts, "buvid3="+b3)
 	}
-	if b4 != "" && !strings.Contains(cookie, "buvid4=") {
+	if b4 != "" && !cookieHasKey(cookie, "buvid4") {
 		parts = append(parts, "buvid4="+b4)
 	}
 	if len(parts) == 0 {
@@ -127,12 +133,16 @@ func (c *Client) init() error {
 		}
 		c.Uid = uid
 		c.WbiMixinKey = wbiMixinKey
-		b3, b4, err := api.GetBuvid3A4()
-		if err != nil {
-			return err
+		// cookie 已含 buvid3/buvid4 时跳过 spi 请求，省一次网络调用
+		// （handler 层 ensureBuvid 启动时通常已补齐）
+		if !cookieHasKey(c.Cookie, "buvid3") || !cookieHasKey(c.Cookie, "buvid4") {
+			b3, b4, err := api.GetBuvid3A4()
+			if err != nil {
+				return err
+			}
+			// b3/b4 都入 cookie，缺哪个补哪个，不再丢弃 buvid4，也不重复追加
+			c.Cookie = appendBuvidCookies(c.Cookie, b3, b4)
 		}
-		// b3/b4 都入 cookie，缺哪个补哪个，不再丢弃 buvid4，也不重复追加
-		c.Cookie = appendBuvidCookies(c.Cookie, b3, b4)
 		// 进房包 buvid 字段应传真实 buvid3，cookie 里没有时再回退 _uuid
 		if v := buvidFromCookie(c.Cookie); v != "" {
 			c.Buvid = v
@@ -201,6 +211,11 @@ func wsHeaders() http.Header {
 func (c *Client) connect() error {
 	reqHeader := wsHeaders()
 retry:
+	select {
+	case <-c.done:
+		return errors.New("client stopped")
+	default:
+	}
 	c.host = c.hostList[c.retryCount%len(c.hostList)]
 	c.retryCount++
 	conn, res, err := wsDialer.Dial(fmt.Sprintf("wss://%s/sub", c.host), reqHeader)
@@ -213,6 +228,8 @@ retry:
 	_ = res.Body.Close()
 	if err = c.sendEnterPacket(); err != nil {
 		log.Errorf("failed to send enter packet, retry %d times", c.retryCount)
+		// 关闭已建立但发不进房包的连接，否则 goto retry 覆盖 c.conn 后泄漏 fd
+		_ = conn.Close()
 		time.Sleep(2 * time.Second)
 		goto retry
 	}
@@ -228,7 +245,8 @@ func (c *Client) wsLoop() {
 			msgType, data, err := c.conn.ReadMessage()
 			if err != nil {
 				log.Error("ws message read failed, reconnecting")
-				time.Sleep(time.Duration(3) * time.Millisecond)
+				// 重连间隔 3 秒（原 3ms 为笔误，会造成疯狂重连）
+				time.Sleep(3 * time.Second)
 				_ = c.connect()
 				continue
 			}

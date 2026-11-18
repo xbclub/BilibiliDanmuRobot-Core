@@ -47,7 +47,7 @@ func registerInteractWord(c *client.Client, svcCtx *svc.ServiceContext) {
 func handleInteractEvent(svcCtx *svc.ServiceContext, uid int64, uname string, msgType int32, medal *entity.FansMedalInfo) {
 	// 1 进场 2 关注 3 分享 5(互关)
 	if msgType == 1 {
-		logx.Infof("进场事件 uid=%v uname=%v", uid, uname)
+		logx.Debugf("进场事件 uid=%v uname=%v", uid, uname)
 	}
 	switch msgType {
 	case 1:
@@ -89,10 +89,6 @@ func dedupEnter(uid int64) bool {
 }
 
 func handleEnter(svcCtx *svc.ServiceContext, uid int64, uname string, medal *entity.FansMedalInfo) {
-	if !dedupEnter(uid) {
-		logx.Debugf("进场事件短窗去重: uid=%v uname=%v", uid, uname)
-		return
-	}
 	if !svcCtx.Config.InteractSelf && strconv.FormatInt(uid, 10) == svcCtx.RobotID {
 		return
 	}
@@ -105,11 +101,17 @@ func handleEnter(svcCtx *svc.ServiceContext, uid int64, uname string, medal *ent
 		return
 	}
 	if !svcCtx.Config.InteractWord {
-		logx.Infof("进场跳过: InteractWord=false uid=%v uname=%v", uid, uname)
+		// 天选等场景临时关闭欢迎；去重戳放在此判断之后，
+		// 避免暂停期间的进场把恢复后 10 秒内的真实进场也吞掉
+		logx.Debugf("进场跳过: InteractWord=false uid=%v uname=%v", uid, uname)
+		return
+	}
+	if !dedupEnter(uid) {
+		logx.Debugf("进场事件短窗去重: uid=%v uname=%v", uid, uname)
 		return
 	}
 	if inWide(uname, svcCtx.Config.WelcomeBlacklistWide) || in(uname, svcCtx.Config.WelcomeBlacklist) {
-		logx.Infof("进场跳过: 黑名单 uid=%v uname=%v", uid, uname)
+		logx.Debugf("进场跳过: 黑名单 uid=%v uname=%v", uid, uname)
 		return
 	}
 

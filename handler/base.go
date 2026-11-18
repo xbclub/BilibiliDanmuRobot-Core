@@ -74,9 +74,9 @@ func NewWsHandler() WsHandler {
 	roominfo, err := biliapi.RoomInit(ctx.Config.RoomId)
 	if err != nil {
 		logx.Error(err)
-		//return nil
+	} else {
+		ctx.UserID = roominfo.Data.Uid
 	}
-	ctx.UserID = roominfo.Data.Uid
 	if userinfo, err := biliapi.Userinfo(ctx.Config.RoomId); err == nil && userinfo != nil {
 		ctx.AnchorName = userinfo.Data.Info.Uname
 	}
@@ -110,15 +110,26 @@ func (ws *wsHandler) ReloadConfig() error {
 		anchorName = userinfo.Data.Info.Uname
 	}
 
+	// 先把新连接完全立起来，任何一步失败都直接返回，旧连接与旧上下文零改动
+	newCli := client.NewClient(c.RoomId)
+	newCli.SetCookie(biliapi.CookieStr)
+	if err := newCli.Start(); err != nil {
+		logx.Errorf("新房间连接失败，保持原房间 %v: %v", oldconfig.RoomId, err)
+		return err
+	}
+
 	ctx := svc.NewServiceContext(c)
 	ctx.RobotID = ws.svc.RobotID
 	ctx.UserID = roominfo.Data.Uid
 	ctx.AnchorName = anchorName
 	ctx.Autointerract = ws.svc.Autointerract
 
-	// 原地更新原有 ServiceContext：常驻 goroutine（弹幕推送/欢迎/礼物/PK 等）
-	// 在启动时捕获了 ws.svc 指针，整体替换会使它们继续读写旧实例，
-	// 导致配置热更新失效、PK 串门 uid 集合与新注册的 handler 断开（PR #33 评审 P0）
+	// 新连接就绪后再切换：先停旧连接收口旧房事件，再原地更新原有
+	// ServiceContext（常驻 goroutine 在启动时捕获了 ws.svc 指针，整体替换
+	// 会使它们读写旧实例，PR #33 评审 P0），最后注册新 handler——
+	// 保证 handler 注册时读到的已是新房上下文，且换房期间无旧房事件写入新房表
+	oldCli := ws.client
+	oldCli.Stop()
 	ws.svc.Config = ctx.Config
 	ws.svc.RobotID = ctx.RobotID
 	ws.svc.UserID = ctx.UserID
@@ -132,12 +143,7 @@ func (ws *wsHandler) ReloadConfig() error {
 	// 保证 pk goroutine 与新注册的 handler 始终读写同一集合
 	ws.svc.OtherSideUid.Clear()
 
-	ws.client.Stop()
-	ws.client = client.NewClient(c.RoomId)
-	ws.client.SetCookie(biliapi.CookieStr)
-	if err := ws.client.Start(); err != nil {
-		return err
-	}
+	ws.client = newCli
 	ws.registerHandler()
 	ws.reloadCronIfNeeded(c, oldconfig)
 	return nil
