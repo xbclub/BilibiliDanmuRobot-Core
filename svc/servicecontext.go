@@ -76,7 +76,9 @@ type ServiceContext struct {
 	SignInModel       model.SignInModel
 	DanmuCntModel     model.DanmuCntModel
 	BlindBoxStatModel model.BlindBoxStatModel
-	UserID            int64 //主播id
+	VisitModel        model.VisitModel
+	UserID            int64  //主播id
+	AnchorName        string //主播昵称
 	Autointerract     struct {
 		EntryEffect        bool
 		WelcomeHighWealthy bool
@@ -96,6 +98,7 @@ func NewServiceContext(c config.Config) *ServiceContext {
 		SignInModel:       model.NewSignInModel(db, int64(c.RoomId)),
 		DanmuCntModel:     model.NewDanmuCntModel(db, int64(c.RoomId)),
 		BlindBoxStatModel: model.NewBlindBoxStatModel(db, int64(c.RoomId)),
+		VisitModel:        model.NewVisitModel(db, int64(c.RoomId)),
 		Config:            &c,
 		UserID:            0,
 	}

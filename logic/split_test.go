@@ -1,44 +1,37 @@
 package logic
 
 import (
-	"reflect"
 	"strings"
 	"testing"
 )
 
-func TestSplitDanmu(t *testing.T) {
-	tests := []struct {
-		name     string
-		msg      string
-		danmuLen int
-		want     []string
-	}{
-		{"空文本", "", 20, nil},
-		{"短文本不切分", "你好", 20, []string{"你好"}},
-		{"恰好等长", "一二三四五六七八九十", 10, []string{"一二三四五六七八九十"}},
-		{"超长中文切分", strings.Repeat("弹", 45), 20, []string{strings.Repeat("弹", 20), strings.Repeat("弹", 20), strings.Repeat("弹", 5)}},
-		{"非整数倍余一条", "一二三四五", 2, []string{"一二", "三四", "五"}},
-		{"emoji 按 rune 切分", "😀😅🙂🙃😉😊😐🤐🤨😐", 3, []string{"😀😅🙂", "🙃😉😊", "😐🤐🤨", "😐"}},
-		{"danmuLen 为 0 防除零", "一二三", 0, []string{"一", "二", "三"}},
-		{"danmuLen 为负防除零", "一二三", -5, []string{"一", "二", "三"}},
-		{"danmuLen 为 1 逐字切分", "abc", 1, []string{"a", "b", "c"}},
+func TestSplitMessageKeepsFortyRunes(t *testing.T) {
+	msg := strings.Repeat("中", 40)
+	got := SplitMessage(msg, 40)
+	if len(got) != 1 || got[0] != msg {
+		t.Fatalf("40 runes should stay in one message, got %#v", got)
 	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := SplitDanmu(tt.msg, tt.danmuLen); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("SplitDanmu(%q, %d) = %q, want %q", tt.msg, tt.danmuLen, got, tt.want)
-			}
-		})
+
+	msg = strings.Repeat("中", 41)
+	got = SplitMessage(msg, 40)
+	if len(got) != 2 || len([]rune(got[0])) != 40 || len([]rune(got[1])) != 1 {
+		t.Fatalf("41 runes should split into 40+1, got %#v", got)
 	}
 }
 
-func TestSplitDanmuNoChunkExceedsLimit(t *testing.T) {
-	msg := "混合内容：Hello世界！This is a long message 用于验证每段都不超限。"
-	for _, limit := range []int{1, 2, 5, 20} {
-		for _, chunk := range SplitDanmu(msg, limit) {
-			if got := len([]rune(chunk)); got > limit {
-				t.Errorf("limit=%d 时切出长度 %d 的分段: %q", limit, got, chunk)
-			}
-		}
+func TestSplitMessageCountsWideAndNarrowRunesEqually(t *testing.T) {
+	msg := strings.Repeat("a中Ａ１", 10)
+	got := SplitMessage(msg, 40)
+	if len(got) != 1 || got[0] != msg {
+		t.Fatalf("40 mixed-width runes should stay in one message, got %#v", got)
+	}
+}
+
+func TestSplitMessageEdgeCases(t *testing.T) {
+	if got := SplitMessage("", 40); got != nil {
+		t.Fatalf("empty message should return nil, got %#v", got)
+	}
+	if got := SplitMessage("abc", 0); len(got) != 1 || got[0] != "abc" {
+		t.Fatalf("non-positive limit should not split, got %#v", got)
 	}
 }

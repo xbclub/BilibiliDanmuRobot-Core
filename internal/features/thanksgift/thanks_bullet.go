@@ -12,6 +12,7 @@ import (
 	"github.com/xbclub/BilibiliDanmuRobot-Core/entity"
 	"github.com/xbclub/BilibiliDanmuRobot-Core/logic"
 	"github.com/xbclub/BilibiliDanmuRobot-Core/svc"
+	"github.com/zeromicro/go-zero/core/logx"
 )
 
 // 检测到礼物，push [uname]->[giftName]->[cost]，number+1
@@ -213,7 +214,7 @@ func summarizeGift(danmuLen int, minCost int, svcCtx *svc.ServiceContext) {
 
 		ms := []rune(msg)
 		if sumCost < minCost {
-			// discard
+			logx.Infof("礼物感谢跳过: uname=%s gifts=%v cost=%d minCost=%d", name, giftstring, sumCost, minCost)
 		} else if len(ms) > danmuLen {
 			if !svcCtx.Config.ThanksGiftUseAt {
 				logic.PushToBulletSender("感谢 " + name + " 的")

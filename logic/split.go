@@ -1,24 +1,25 @@
 package logic
 
-// SplitDanmu 按弹幕长度限制（rune 计数）把长文本切分为多条弹幕，
-// danmuLen 小于 1 时按 1 处理，避免除零
-func SplitDanmu(msg string, danmuLen int) []string {
-	if danmuLen < 1 {
-		danmuLen = 1
+// SplitMessage 按弹幕长度限制（rune 计数）把长文本切分为多条弹幕，
+// limit 小于等于 0 时不切分，原文返回
+func SplitMessage(msg string, limit int) []string {
+	if msg == "" {
+		return nil
 	}
-	var msgdata []string
-	msgrun := []rune(msg)
-	msgLen := len(msgrun)
-	msgcount := msgLen / danmuLen
-	if msgLen%danmuLen != 0 {
-		msgcount += 1
+	if limit <= 0 {
+		return []string{msg}
 	}
-	for m := 1; m <= msgcount; m++ {
-		if msgLen < m*danmuLen {
-			msgdata = append(msgdata, string(msgrun[(m-1)*danmuLen:msgLen]))
-			continue
-		}
-		msgdata = append(msgdata, string(msgrun[(m-1)*danmuLen:danmuLen*m]))
+	runes := []rune(msg)
+	if len(runes) <= limit {
+		return []string{msg}
 	}
-	return msgdata
+	var out []string
+	for len(runes) > limit {
+		out = append(out, string(runes[:limit]))
+		runes = runes[limit:]
+	}
+	if len(runes) > 0 {
+		out = append(out, string(runes))
+	}
+	return out
 }

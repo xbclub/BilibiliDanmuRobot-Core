@@ -37,11 +37,16 @@ type Config struct {
 	}
 
 	// 欢迎配置
-	InteractWord       bool       `json:",default=false"`         // 欢迎弹幕开关
-	WelcomeUseAt       bool       `json:",default=false"`         // 使用@模式欢迎
-	WelcomeDanmu       []string   `json:",default='欢迎 {user} ~'"` // 欢迎语列表
-	InteractWordByTime bool       `json:",default=false"`         // 按时间段欢迎
-	WelcomeDanmuByTime []struct { // 分时段欢迎配置列表
+	InteractWord         bool       `json:",default=false"`         // 欢迎弹幕开关
+	WelcomeUseAt         bool       `json:",default=false"`         // 使用@模式欢迎
+	WelcomeDanmu         []string   `json:",default='欢迎 {user} ~'"` // 欢迎语列表
+	WelcomeTier          bool       `json:",default=false"`         // 三档欢迎开关（新人/回头客/老粉）
+	WelcomeNew           []string   `json:",optional"`              // 新人欢迎语
+	WelcomeBack          []string   `json:",optional"`              // 回头客欢迎语
+	WelcomeFan           []string   `json:",optional"`              // 老粉欢迎语
+	WelcomeFanMedalLevel int        `json:",default=0"`             // 老粉最低粉丝牌等级，0 表示不限
+	InteractWordByTime   bool       `json:",default=false"`         // 按时间段欢迎
+	WelcomeDanmuByTime   []struct { // 分时段欢迎配置列表
 		Enabled bool     `json:",optional"`      // 是否启用
 		Key     string   `json:",optional"`      // 时间
 		Random  bool     `json:",default=false"` // 是否随机

@@ -77,16 +77,24 @@ func NewWsHandler() WsHandler {
 		//return nil
 	}
 	ctx.UserID = roominfo.Data.Uid
+	if userinfo, err := biliapi.Userinfo(ctx.Config.RoomId); err == nil && userinfo != nil {
+		ctx.AnchorName = userinfo.Data.Info.Uname
+	}
 	return ws
 }
 func (ws *wsHandler) ReloadConfig() error {
 	ctx, err := mustloadConfig()
-	oldconfig := *ws.svc.Config
 	if err != nil {
 		return err
 	}
-	ws.svc.Config = ctx.Config
-	if ctx.Config.RoomId != oldconfig.RoomId {
+	oldconfig := *ws.svc.Config
+	ctx.RobotID = ws.svc.RobotID
+	ctx.UserID = ws.svc.UserID
+	ctx.AnchorName = ws.svc.AnchorName
+	ctx.Autointerract = ws.svc.Autointerract
+
+	roomChanged := ctx.Config.RoomId != oldconfig.RoomId
+	if roomChanged {
 		logx.Infof("房间号更改，更换房间号 ：%v", ctx.Config.RoomId)
 		ws.client.Stop()
 		ws.client = client.NewClient(ctx.Config.RoomId)
@@ -94,11 +102,17 @@ func (ws *wsHandler) ReloadConfig() error {
 		roominfo, err := biliapi.RoomInit(ctx.Config.RoomId)
 		if err != nil {
 			logx.Error(err)
-			//return err
+		} else {
+			ctx.UserID = roominfo.Data.Uid
 		}
-		ctx.UserID = roominfo.Data.Uid
-		err = ws.client.Start()
-		if err != nil {
+		if userinfo, err := biliapi.Userinfo(ctx.Config.RoomId); err == nil && userinfo != nil {
+			ctx.AnchorName = userinfo.Data.Info.Uname
+		}
+	}
+	ws.svc = ctx
+
+	if roomChanged {
+		if err := ws.client.Start(); err != nil {
 			return err
 		}
 		ws.registerHandler()
@@ -162,14 +176,12 @@ func (w *wsHandler) StopChanel() {
 }
 func (w *wsHandler) SayGoodbye() {
 	if len(w.svc.Config.GoodbyeInfo) > 0 {
-		msgdata := logic.SplitDanmu(w.svc.Config.GoodbyeInfo, w.svc.Config.DanmuLen)
-		for _, msgs := range msgdata {
+		for _, msgs := range logic.SplitMessage(w.svc.Config.GoodbyeInfo, w.svc.Config.DanmuLen) {
 			err := biliapi.Send(msgs, w.svc)
 			if err != nil {
 				logx.Errorf("下播弹幕发送失败：%s msg: %s", err, msgs)
 			}
 			time.Sleep(1 * time.Second) // 防止弹幕发送过快
-			// logx.Info(">>>>>>>>>", msgs)
 		}
 	}
 }
