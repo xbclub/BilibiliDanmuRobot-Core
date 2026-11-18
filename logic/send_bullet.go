@@ -13,6 +13,9 @@ var sender = &BulletSender{
 	bulletChan: make(chan entity.Bullet, 1000),
 }
 
+// sendInterval 中央发送队列的全局出口限速：B 站弹幕实际约 3 秒一条，留 0.5s 宽限
+const sendInterval = 3500 * time.Millisecond
+
 type BulletSender struct {
 	bulletChan chan entity.Bullet
 }
@@ -43,7 +46,7 @@ func StartSendBullet(ctx context.Context, svcCtx *svc.ServiceContext) {
 					logx.Infof("弹幕发送成功：%s", msgs)
 				}
 				//fmt.Println(msgs)
-				time.Sleep(1 * time.Second) // 防止弹幕发送过快
+				time.Sleep(sendInterval) // 防止弹幕发送过快
 			}
 		}
 

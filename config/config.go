@@ -28,6 +28,7 @@ type Config struct {
 	FuzzyMatchCmd bool     `json:",default=false"`                               // 模糊匹配关键字
 	RobotName     string   `json:",default=花花"`                                  // 机器人名称
 	RobotMode     string   `json:",default=QingYunKe,options=QingYunKe|ChatGPT"` // 机器人服务
+	RobotEnable   bool     `json:",default=true"`                                // AI 机器人总开关
 	ChatGPT       struct { // GPT的配置
 		APIUrl   string `json:",default=https://api.openai.com/v1"`
 		APIToken string `json:",optional"`
@@ -62,16 +63,20 @@ type Config struct {
 	FocusDanmu              []string          `json:",optional"`      // 关注的感谢列表
 	WelcomeSwitch           bool              `json:",default=false"` // 指定欢迎开关
 	WelcomeString           map[string]string `json:",optional"`      // 指定欢迎配置列表
+	UserNicknames           map[string]string `json:",optional"`      // 熟人昵称（UID 字符串 -> 昵称），三档欢迎用昵称替代@
 	WelcomeBlacklistWide    []string          `json:",optional"`      // 不欢迎黑名单模糊匹配
 	WelcomeBlacklist        []string          `json:",optional"`      // 不欢迎黑名单精确匹配
 
 	// 答谢设置
-	ThanksGift             bool `json:",default=false"` // 感谢送礼
-	ThanksGiftTimeout      int  `json:",default=3"`     // 礼物统计时间
-	ThanksBlindBoxTimeout  int  `json:",default=6"`     // 盲盒统计时间
-	ThanksMinCost          int  `json:",default=0"`     // 最小感谢礼物价值
-	BlindBoxProfitLossStat bool `json:",default=true"`  // 盲盒盈亏统计
-	ThanksGiftUseAt        bool `json:",default=false"` // 使用@模式感谢
+	ThanksGift             bool     `json:",default=false"` // 感谢送礼
+	ThanksGiftTimeout      int      `json:",default=3"`     // 礼物统计时间
+	ThanksBlindBoxTimeout  int      `json:",default=6"`     // 盲盒统计时间
+	ThanksMinCost          int      `json:",default=0"`     // 最小感谢礼物价值
+	BlindBoxProfitLossStat bool     `json:",default=true"`  // 盲盒盈亏统计
+	ThanksGiftUseAt        bool     `json:",default=false"` // 使用@模式感谢
+	ThanksGiftDanmu        []string `json:",optional"`      // 普通礼物感谢话术（{user}/{gift}/{num}/{cost}），缺省用内置话术
+	ThanksBlindBoxDanmu    []string `json:",optional"`      // 盲盒感谢话术
+	ThanksGuardDanmu       []string `json:",optional"`      // 大航海开通感谢话术
 
 	// 定时弹幕配置
 	CronDanmu bool `json:",default=false"` // 定时弹幕开关

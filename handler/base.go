@@ -221,7 +221,7 @@ func (w *wsHandler) SayGoodbye() {
 			if err != nil {
 				logx.Errorf("下播弹幕发送失败：%s msg: %s", err, msgs)
 			}
-			time.Sleep(1 * time.Second) // 防止弹幕发送过快
+			time.Sleep(3500 * time.Millisecond) // 防止弹幕发送过快
 		}
 	}
 }
@@ -336,6 +336,7 @@ func (w *wsHandler) corndanmuStart() {
 	}
 	w.corndanmu.Start()
 }
+
 // loadConfig 读取配置文件并完成日志与目录初始化，不建立数据库连接
 func loadConfig() (config.Config, error) {
 	dir := "./token"
