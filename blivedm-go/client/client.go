@@ -216,6 +216,11 @@ retry:
 		return errors.New("client stopped")
 	default:
 	}
+	// 兜底：外部直接 SetHost/UseDefaultHost 跳过 init 时 hostList 可能为空，
+	// 取模会除零 panic
+	if len(c.hostList) == 0 {
+		c.hostList = []string{defaultDanmuHost}
+	}
 	c.host = c.hostList[c.retryCount%len(c.hostList)]
 	c.retryCount++
 	conn, res, err := wsDialer.Dial(fmt.Sprintf("wss://%s/sub", c.host), reqHeader)

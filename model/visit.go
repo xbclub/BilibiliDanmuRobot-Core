@@ -3,6 +3,7 @@ package model
 import (
 	"context"
 	"fmt"
+	"sync/atomic"
 	"time"
 
 	"github.com/zeromicro/go-zero/core/logx"
@@ -15,8 +16,9 @@ type VisitModel interface {
 }
 
 type defaultVisitModel struct {
-	conn  *gorm.DB
-	table string
+	conn        *gorm.DB
+	table       string
+	lastCleanNs atomic.Int64
 }
 
 type VisitBase struct {
@@ -50,6 +52,7 @@ func NewVisitModel(conn *gorm.DB, roomID int64) VisitModel {
 }
 
 func (m *defaultVisitModel) Touch(ctx context.Context, uid, now int64) (bool, error) {
+	m.maybeClean(now)
 	var first bool
 	err := m.conn.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		res := tx.Clauses(clause.OnConflict{DoNothing: true}).
@@ -68,4 +71,20 @@ func (m *defaultVisitModel) Touch(ctx context.Context, uid, now int64) (bool, er
 		}).Error
 	})
 	return first, err
+}
+
+// maybeClean 每 24 小时清理一次保留窗口外的旧记录（CAS 保证并发只触发一次）
+func (m *defaultVisitModel) maybeClean(nowUnix int64) {
+	last := m.lastCleanNs.Load()
+	if last != 0 && time.Since(time.Unix(0, last)) < 24*time.Hour {
+		return
+	}
+	if !m.lastCleanNs.CompareAndSwap(last, time.Now().UnixNano()) {
+		return
+	}
+	if err := m.conn.Table(m.table).
+		Where("last_seen < ?", nowUnix-visitRetention).
+		Delete(&VisitBase{}).Error; err != nil {
+		logx.Errorf("周期清理进场记录失败 table=%s: %v", m.table, err)
+	}
 }

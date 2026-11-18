@@ -35,7 +35,8 @@ var UserAgent = buildUserAgent()
 
 // ChromeVersion 返回 utls profile 里的主版本号（形如 "133"），
 // 供需要单独拼版本号的场景使用（如测试断言 UA 与指纹一致）。
-// 这里不写死具体数字：值来自 browserclient.ChromeProfile（钉死的 HelloChrome_133）。
+// 这里不写死具体数字：值来自 browserclient.ChromeProfile（HelloChrome_Auto，
+// 随 utls 升级自动跟随；utls v1.8.2 下 Auto 恰为 133）。
 func ChromeVersion() string {
 	return browserclient.ChromeProfile.Version
 }

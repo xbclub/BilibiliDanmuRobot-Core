@@ -91,8 +91,9 @@ func (ws *wsHandler) ReloadConfig() error {
 
 	if c.RoomId == oldconfig.RoomId {
 		// 仅配置热更：只替换 Config 指针，复用原有 DB 连接与 models，
-		// 避免每次 reload 重建 sqlite 连接与 AutoMigrate（PR #33 评审 P2）
-		ws.svc.Config = &c
+		// 避免每次 reload 重建 sqlite 连接与 AutoMigrate（PR #33 评审 P2）；
+		// 与默认值不同的欢迎开关视为运行时覆盖，热更后保留
+		ws.svc.ApplyConfigHotSwap(&c)
 		ws.reloadCronIfNeeded(c, oldconfig)
 		return nil
 	}
@@ -122,29 +123,27 @@ func (ws *wsHandler) ReloadConfig() error {
 	ctx.RobotID = ws.svc.RobotID
 	ctx.UserID = roominfo.Data.Uid
 	ctx.AnchorName = anchorName
-	ctx.Autointerract = ws.svc.Autointerract
 
 	// 新连接就绪后再切换：先停旧连接收口旧房事件，再原地更新原有
-	// ServiceContext（常驻 goroutine 在启动时捕获了 ws.svc 指针，整体替换
-	// 会使它们读写旧实例，PR #33 评审 P0），最后注册新 handler——
-	// 保证 handler 注册时读到的已是新房上下文，且换房期间无旧房事件写入新房表
+	// ServiceContext（写侧加锁，常驻 goroutine 捕获的 ws.svc 指针不变），
+	// 最后注册新 handler——保证 handler 注册时读到的已是新房上下文，
+	// 且换房期间无旧房事件写入新房表。Autointerract 属实例状态不随 ctx 覆盖
 	oldCli := ws.client
 	oldCli.Stop()
-	ws.svc.Config = ctx.Config
-	ws.svc.RobotID = ctx.RobotID
-	ws.svc.UserID = ctx.UserID
-	ws.svc.AnchorName = ctx.AnchorName
-	ws.svc.Autointerract = ctx.Autointerract
-	ws.svc.SignInModel = ctx.SignInModel
-	ws.svc.DanmuCntModel = ctx.DanmuCntModel
-	ws.svc.BlindBoxStatModel = ctx.BlindBoxStatModel
-	ws.svc.VisitModel = ctx.VisitModel
+	oldDb := ws.svc.ApplyRoomSwitch(ctx)
 	// 换房后清空旧房的 PK 串门 uid 集合；不替换 OtherSideUid 实例，
 	// 保证 pk goroutine 与新注册的 handler 始终读写同一集合
 	ws.svc.OtherSideUid.Clear()
 
 	ws.client = newCli
 	ws.registerHandler()
+	if oldDb != nil {
+		// 旧连接上可能还有极少量在途查询，Close 后其报错仅记日志；
+		// 不关闭则每次换房泄漏一个 sqlite 连接
+		if sqlDB, err := oldDb.DB(); err == nil {
+			_ = sqlDB.Close()
+		}
+	}
 	ws.reloadCronIfNeeded(c, oldconfig)
 	return nil
 }
@@ -191,7 +190,7 @@ func (w *wsHandler) GetUserinfo() *entity.UserinfoLite {
 	return biliapi.GetUserInfo()
 }
 func (w *wsHandler) GetSvc() svc.ServiceContext {
-	return *w.svc
+	return w.svc.Snapshot()
 }
 func (w *wsHandler) StopWsClient() {
 	w.corndanmu.Stop()

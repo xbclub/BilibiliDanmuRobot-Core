@@ -231,6 +231,18 @@ func decodeBody(resp *http.Response) (*http.Response, error) {
 	if enc == "" || enc == "identity" {
 		return resp, nil
 	}
+	// 空 body 边界：响应体为空但带 Content-Encoding 时（204/304、空 JSON 等），
+	// gzip.NewReader 读不到 gzip 头字节会把 io.EOF 当错误返回，被误判为解压失败。
+	// 先用 Peek 判空：空体时 Peek 未从原始 Body 取走任何字节，跳过解压原样返回；
+	// 非空时 Peek 的预读字节留在 src 内，后续必须改从 src 读，否则预读数据会丢。
+	if resp.Body == nil {
+		return resp, nil
+	}
+	src := bufio.NewReader(resp.Body)
+	if _, perr := src.Peek(1); perr == io.EOF {
+		return resp, nil
+	}
+	resp.Body = &decodedBody{Reader: src, closer: resp.Body}
 	var r io.Reader
 	switch enc {
 	case "gzip", "x-gzip":

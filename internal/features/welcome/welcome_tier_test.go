@@ -3,6 +3,7 @@ package welcome
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/xbclub/BilibiliDanmuRobot-Core/config"
 	"github.com/xbclub/BilibiliDanmuRobot-Core/entity"
@@ -122,5 +123,42 @@ func TestDedupEnter(t *testing.T) {
 	}
 	if !dedupEnter(42000002) {
 		t.Fatal("different uid should pass")
+	}
+}
+
+func TestDedupEnterExpiry(t *testing.T) {
+	t0 := time.Now()
+	if !dedupEnterAt(43000001, t0) {
+		t.Fatal("first enter should pass")
+	}
+	if dedupEnterAt(43000001, t0.Add(9*time.Second)) {
+		t.Fatal("9s duplicate should be dropped")
+	}
+	// 窗口过后同 uid 可再次通过，且过期条目被顺带清理
+	if !dedupEnterAt(43000001, t0.Add(11*time.Second)) {
+		t.Fatal("enter after window should pass")
+	}
+	enterSeenMu.Lock()
+	if _, ok := enterSeen[43000002]; ok {
+		enterSeenMu.Unlock()
+		t.Fatal("expired entries should be cleaned")
+	}
+	enterSeenMu.Unlock()
+}
+
+func TestRenderWelcomeSmallBudget(t *testing.T) {
+	cfg := config.Config{DanmuLen: 2}
+	ctx := &svc.ServiceContext{Config: &cfg, AnchorName: "家里云云云云云"}
+	medal := &entity.FansMedalInfo{MedalName: "云宝牌名很长", MedalLevel: 7}
+	// DanmuLen=2 时预算保底 4：{anchor}/{medal} 至多 3 rune + 省略号
+	got := renderWelcome("{anchor}|{medal}|{medal_level}", "小明", medal, ctx)
+	if got != "家里云…|云宝牌…|7" {
+		t.Fatalf("small budget render mismatch: %q", got)
+	}
+
+	// nil medal：占位符渲染为空串（new/back 档模板不应包含 medal 占位符）
+	got = renderWelcome("{user}来了", "小明", nil, ctx)
+	if got != "小明来了" {
+		t.Fatalf("nil medal render mismatch: %q", got)
 	}
 }

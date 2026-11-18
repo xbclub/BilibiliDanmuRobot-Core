@@ -73,9 +73,12 @@ var (
 // INTERACT_WORD 与 INTERACT_WORD_V2，短窗内同一 uid 只处理第一条，
 // 避免 visit 表重复计数、真·新人被并发事件误判为回头客（PR #33 评审 P1）
 func dedupEnter(uid int64) bool {
+	return dedupEnterAt(uid, time.Now())
+}
+
+func dedupEnterAt(uid int64, now time.Time) bool {
 	enterSeenMu.Lock()
 	defer enterSeenMu.Unlock()
-	now := time.Now()
 	if t, ok := enterSeen[uid]; ok && now.Sub(t) < enterSeenWindow {
 		return false
 	}
@@ -134,13 +137,9 @@ func handleEnter(svcCtx *svc.ServiceContext, uid int64, uname string, medal *ent
 }
 
 func pushInteractMsg(uid int64, msg string) {
-	parts := strings.Split(msg, "\n")
-	if len(parts) > 1 {
-		for i, s := range parts {
-			PushToInterractChan(&InterractData{Uid: uid + int64(i), Msg: s})
-		}
-		return
-	}
+	// 多行模板整条入队，由发送层统一按 \n 拆分：每行用真实 uid 构造 @ 回复，
+	// 且同 uid 的多行与去重窗口一致——旧的 uid+i 拆行入队会 @ 到不存在的
+	// UID 并绕过发送层按 uid 的 10 秒去重
 	PushToInterractChan(&InterractData{Uid: uid, Msg: msg})
 }
 
@@ -252,8 +251,12 @@ func renderWelcome(tpl, uname string, medal *entity.FansMedalInfo, svcCtx *svc.S
 		medalName = medal.MedalName
 		medalLevel = strconv.FormatInt(medal.MedalLevel, 10)
 	}
-	// 主播名/粉丝牌名计入长度预算，避免模板超长被 SplitMessage 硬切在词中间
+	// 主播名/粉丝牌名计入长度预算，避免模板超长被 SplitMessage 硬切在词中间；
+	// 极小 DanmuLen 时保底 4 rune，预算机制不至于静默失效
 	budget := svcCtx.Config.DanmuLen / 2
+	if budget < 4 {
+		budget = 4
+	}
 	return strings.NewReplacer(
 		"{user}", name,
 		"{medal}", clipRunes(medalName, budget),

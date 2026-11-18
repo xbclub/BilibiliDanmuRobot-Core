@@ -65,12 +65,9 @@ type DanmuInfo struct {
 }
 
 func GetUid(cookie string) (int, string, error) {
+	// 主站域默认头由 HttpGet 内的 HeadersForURL 统一注入，这里只补 cookie
 	headers := &http.Header{}
 	headers.Set("cookie", cookie)
-	// nav 为主站域接口，补齐浏览器特征头
-	for k, v := range webprofile.MainHeaders() {
-		headers.Set(k, v)
-	}
 	resp, err := HttpGet("https://api.bilibili.com/x/web-interface/nav", headers)
 	if err != nil {
 		return 0, "", err
