@@ -104,12 +104,12 @@ func TestRenderWelcomePlaceholders(t *testing.T) {
 	medal := &entity.FansMedalInfo{MedalName: "云宝", MedalLevel: 7}
 	tpl := "{at}{user}的{medal}已{medal_level}级，最爱{anchor}"
 
-	if got := renderWelcome(tpl, "小明", medal, ctx); got != "@小明 小明的云宝已7级，最爱家里云" {
+	if got := renderWelcome(tpl, "小明", medal, ctx, 0); got != "@小明 小明的云宝已7级，最爱家里云" {
 		t.Fatalf("non-at render mismatch: %q", got)
 	}
 
 	ctx.Config.WelcomeUseAt = true
-	if got := renderWelcome(tpl, "小明", medal, ctx); got != "小明的云宝已7级，最爱家里云" {
+	if got := renderWelcome(tpl, "小明", medal, ctx, 0); got != "小明的云宝已7级，最爱家里云" {
 		t.Fatalf("at-mode render mismatch: %q", got)
 	}
 }
@@ -151,14 +151,33 @@ func TestRenderWelcomeSmallBudget(t *testing.T) {
 	ctx := &svc.ServiceContext{Config: &cfg, AnchorName: "家里云云云云云"}
 	medal := &entity.FansMedalInfo{MedalName: "云宝牌名很长", MedalLevel: 7}
 	// DanmuLen=2 时预算保底 4：{anchor}/{medal} 至多 3 rune + 省略号
-	got := renderWelcome("{anchor}|{medal}|{medal_level}", "小明", medal, ctx)
+	got := renderWelcome("{anchor}|{medal}|{medal_level}", "小明", medal, ctx, 0)
 	if got != "家里云…|云宝牌…|7" {
 		t.Fatalf("small budget render mismatch: %q", got)
 	}
 
 	// nil medal：占位符渲染为空串（new/back 档模板不应包含 medal 占位符）
-	got = renderWelcome("{user}来了", "小明", nil, ctx)
+	got = renderWelcome("{user}来了", "小明", nil, ctx, 0)
 	if got != "小明来了" {
 		t.Fatalf("nil medal render mismatch: %q", got)
+	}
+}
+
+func TestRenderWelcomeAlias(t *testing.T) {
+	cfg := config.Config{
+		DanmuLen:      40,
+		UserNicknames: map[string]string{"90001": "小坏"},
+	}
+	ctx := &svc.ServiceContext{Config: &cfg, AnchorName: "家里云"}
+	got := renderWelcome("哈喽{at}今天有没有更想{anchor}呀~", "小明", nil, ctx, 90001)
+	if want := "哈喽小坏今天有没有更想家里云呀~"; got != want {
+		t.Fatalf("renderWelcome() = %q, want %q", got, want)
+	}
+
+	// 超长昵称同样走长度预算截断：DanmuLen=8 → 预算保底 4，至多 3 rune + 省略号
+	small := config.Config{DanmuLen: 8, UserNicknames: map[string]string{"90002": "这是一个特别长的昵称"}}
+	smallCtx := &svc.ServiceContext{Config: &small, AnchorName: "家里云"}
+	if got := renderWelcome("{at}来啦", "小明", nil, smallCtx, 90002); got != "这是一…来啦" {
+		t.Fatalf("long alias should be clipped by budget, got %q", got)
 	}
 }

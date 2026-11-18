@@ -2,13 +2,11 @@ package thanksgift
 
 import (
 	"encoding/json"
-	"fmt"
 	"strconv"
 
 	"github.com/xbclub/BilibiliDanmuRobot-Core/blivedm-go/client"
 	"github.com/xbclub/BilibiliDanmuRobot-Core/entity"
 	"github.com/xbclub/BilibiliDanmuRobot-Core/internal/features/danmuproc"
-	"github.com/xbclub/BilibiliDanmuRobot-Core/logic"
 	"github.com/xbclub/BilibiliDanmuRobot-Core/svc"
 	"github.com/zeromicro/go-zero/core/logx"
 )
@@ -40,11 +38,11 @@ func registerGifts(c *client.Client, svcCtx *svc.ServiceContext) {
 			send := &entity.GuardBuyText{}
 			_ = json.Unmarshal([]byte(s), send)
 			if svcCtx.Config.ThanksGiftUseAt {
-				PushToGuardChan(send, &entity.DanmuMsgTextReplyInfo{
+				PushToGuardChan(svcCtx, send, &entity.DanmuMsgTextReplyInfo{
 					ReplyUid: strconv.Itoa(send.Data.Uid),
 				})
 			} else {
-				PushToGuardChan(send)
+				PushToGuardChan(svcCtx, send)
 			}
 		}
 	})
@@ -59,12 +57,12 @@ func registerGifts(c *client.Client, svcCtx *svc.ServiceContext) {
 				data.Data.ContentSegments[1].Text == "投喂" &&
 				data.Data.ContentSegments[2].Text == "大航海盲盒" {
 
-				logic.PushToBulletSender(fmt.Sprintf("感谢 %s 的 %s", data.Data.ContentSegments[0].Text, data.Data.ContentSegments[4].Text))
+				PushThanksBlindBox(svcCtx, data.Data.ContentSegments[0].Text, data.Data.ContentSegments[4].Text)
 			} else if len(data.Data.ContentSegments) == 6 &&
 				data.Data.ContentSegments[2].Text == "投喂" &&
 				data.Data.ContentSegments[3].Text == "大航海盲盒" {
 
-				logic.PushToBulletSender(fmt.Sprintf("感谢 %s 的 %s", data.Data.ContentSegments[1].Text, data.Data.ContentSegments[5].Text))
+				PushThanksBlindBox(svcCtx, data.Data.ContentSegments[1].Text, data.Data.ContentSegments[5].Text)
 			}
 		}
 	})

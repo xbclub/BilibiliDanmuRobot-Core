@@ -113,7 +113,7 @@ func handleEnter(svcCtx *svc.ServiceContext, uid int64, uname string, medal *ent
 		return
 	}
 
-	if v, ok := svcCtx.Config.WelcomeString[fmt.Sprint(uid)]; svcCtx.Config.WelcomeSwitch && ok {
+	if v, ok := svcCtx.Config.WelcomeString[fmt.Sprint(uid)]; svcCtx.Config.WelcomeSwitch && ok && v != "" {
 		PushToInterractChan(&InterractData{Uid: uid, Msg: v})
 		return
 	}
@@ -132,7 +132,7 @@ func handleEnter(svcCtx *svc.ServiceContext, uid int64, uname string, medal *ent
 		return
 	}
 
-	name := welcomeInteract(uname)
+	name := displayName(svcCtx, uid, uname)
 	if svcCtx.OtherSideUid.Has(uid) {
 		pushInteractMsg(uid, handleInterract(uid, name, svcCtx))
 		return
@@ -231,7 +231,15 @@ func tierWelcome(svcCtx *svc.ServiceContext, uid int64, uname string, medal *ent
 		return "", false
 	}
 	logx.Infof("三档欢迎: uid=%v uname=%v first=%v isFan=%v tier=%s", uid, uname, first, isFan, tier)
-	return renderWelcome(pool[rand.Intn(len(pool))], uname, medal, svcCtx), true
+	return renderWelcome(pool[rand.Intn(len(pool))], uname, medal, svcCtx, uid), true
+}
+
+// displayName 熟人昵称优先：命中 UserNicknames 直接用昵称作称呼，未命中回退原清洗逻辑
+func displayName(svcCtx *svc.ServiceContext, uid int64, uname string) string {
+	if alias := svcCtx.Config.UserNicknames[strconv.FormatInt(uid, 10)]; alias != "" {
+		return alias
+	}
+	return welcomeInteract(uname)
 }
 
 func isFan(svcCtx *svc.ServiceContext, medal *entity.FansMedalInfo) bool {
@@ -253,9 +261,19 @@ func clipRunes(s string, n int) string {
 	return s
 }
 
-func renderWelcome(tpl, uname string, medal *entity.FansMedalInfo, svcCtx *svc.ServiceContext) string {
+func renderWelcome(tpl, uname string, medal *entity.FansMedalInfo, svcCtx *svc.ServiceContext, uid int64) string {
+	// 主播名/粉丝牌名/熟人昵称计入长度预算，避免模板超长被 SplitMessage 硬切在词中间；
+	// 极小 DanmuLen 时保底 4 rune，预算机制不至于静默失效
+	budget := svcCtx.Config.DanmuLen / 2
+	if budget < 4 {
+		budget = 4
+	}
 	name := shortName(uname, 4, svcCtx.Config.DanmuLen)
-	if svcCtx.Config.WelcomeUseAt {
+	if alias := svcCtx.Config.UserNicknames[strconv.FormatInt(uid, 10)]; alias != "" {
+		// 熟人昵称命中：昵称替代 @（不带@不带空格），昵称同样走长度预算截断
+		name = clipRunes(alias, budget)
+		tpl = strings.ReplaceAll(tpl, "{at}", name)
+	} else if svcCtx.Config.WelcomeUseAt {
 		tpl = strings.ReplaceAll(tpl, "{at}", "")
 	} else {
 		tpl = strings.ReplaceAll(tpl, "{at}", "@"+name+" ")
@@ -264,12 +282,6 @@ func renderWelcome(tpl, uname string, medal *entity.FansMedalInfo, svcCtx *svc.S
 	if medal != nil {
 		medalName = medal.MedalName
 		medalLevel = strconv.FormatInt(medal.MedalLevel, 10)
-	}
-	// 主播名/粉丝牌名计入长度预算，避免模板超长被 SplitMessage 硬切在词中间；
-	// 极小 DanmuLen 时保底 4 rune，预算机制不至于静默失效
-	budget := svcCtx.Config.DanmuLen / 2
-	if budget < 4 {
-		budget = 4
 	}
 	return strings.NewReplacer(
 		"{user}", name,

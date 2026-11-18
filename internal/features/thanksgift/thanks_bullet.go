@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"math"
+	"math/rand"
 	"strconv"
 	"strings"
 	"sync"
@@ -42,14 +43,35 @@ func PushToGiftChan(g *entity.SendGiftText) {
 	thanksGiver.giftChan <- g
 }
 
-func PushToGuardChan(g *entity.GuardBuyText, reply ...*entity.DanmuMsgTextReplyInfo) {
+func PushToGuardChan(svcCtx *svc.ServiceContext, g *entity.GuardBuyText, reply ...*entity.DanmuMsgTextReplyInfo) {
+	user, gift := g.Data.Username, g.Data.GiftName
+	if len(svcCtx.Config.ThanksGuardDanmu) > 0 {
+		tpl := svcCtx.Config.ThanksGuardDanmu[rand.Intn(len(svcCtx.Config.ThanksGuardDanmu))]
+		text := renderThanks(tpl, user, gift, 1, 0)
+		if reply != nil {
+			logic.PushToBulletSender(text, reply...)
+		} else {
+			logic.PushToBulletSender(text)
+		}
+		return
+	}
 	if reply != nil {
-		msg := "感谢" + g.Data.GiftName
+		msg := "感谢" + gift
 		logic.PushToBulletSender(msg, reply...)
 	} else {
-		msg := "感谢 " + g.Data.Username + " 的 " + g.Data.GiftName
+		msg := "感谢 " + user + " 的 " + gift
 		logic.PushToBulletSender(msg)
 	}
+}
+
+// PushThanksBlindBox 大航海盲盒投喂感谢，支持 ThanksBlindBoxDanmu 模板
+func PushThanksBlindBox(svcCtx *svc.ServiceContext, user, gift string) {
+	if len(svcCtx.Config.ThanksBlindBoxDanmu) > 0 {
+		tpl := svcCtx.Config.ThanksBlindBoxDanmu[rand.Intn(len(svcCtx.Config.ThanksBlindBoxDanmu))]
+		logic.PushToBulletSender(renderThanks(tpl, user, gift, 1, 0))
+		return
+	}
+	logic.PushToBulletSender("感谢 " + user + " 的 " + gift)
 }
 
 // Run 启动礼物感谢 worker，按 ThanksGiftTimeout 窗口聚合礼物后统一感谢
@@ -125,17 +147,30 @@ func Run(ctx context.Context, svcCtx *svc.ServiceContext) {
 END:
 }
 
+// renderThanks 感谢话术模板渲染，支持 {user}/{gift}/{num}/{cost}，
+// cost 为金瓜子价（1 元 = 1000），渲染为保留两位小数的元
+func renderThanks(tpl, user, gift string, num, cost int) string {
+	return strings.NewReplacer(
+		"{user}", user,
+		"{gift}", gift,
+		"{num}", strconv.Itoa(num),
+		"{cost}", fmt.Sprintf("%.2f", float64(cost)/1000),
+	).Replace(tpl)
+}
+
 func summarizeBlindGift(danmuLen int, svcCtx *svc.ServiceContext) {
 	// 盲盒礼物
 	for name, m := range thanksGiver.giftBlindBoxTable {
 		giftstring := []string{}
 		msg := ""
+		sumCount := 0
 		for blindBoxName, blindBoxMap := range m {
 			if blindBoxMap["profit_and_loss"] > 0 {
 				giftstring = append(giftstring, fmt.Sprintf("%d个%s赚了＋%.2f元", blindBoxMap["count"], blindBoxName, float64(blindBoxMap["profit_and_loss"])/1000))
 			} else {
 				giftstring = append(giftstring, fmt.Sprintf("%d个%s亏了－%.2f元", blindBoxMap["count"], blindBoxName, math.Abs(float64(blindBoxMap["profit_and_loss"])/1000)))
 			}
+			sumCount += blindBoxMap["count"]
 			// 感谢完后立刻清空map
 			delete(m, blindBoxName)
 		}
@@ -153,6 +188,21 @@ func summarizeBlindGift(danmuLen int, svcCtx *svc.ServiceContext) {
 				msg += "，" + v
 				msgShort += "，" + v
 			}
+		}
+
+		giftText := strings.Join(giftstring, "，")
+		if len(svcCtx.Config.ThanksBlindBoxDanmu) > 0 {
+			tpl := svcCtx.Config.ThanksBlindBoxDanmu[rand.Intn(len(svcCtx.Config.ThanksBlindBoxDanmu))]
+			text := renderThanks(tpl, name, giftText, sumCount, 0)
+			if svcCtx.Config.ThanksGiftUseAt {
+				logic.PushToBulletSender(text, &entity.DanmuMsgTextReplyInfo{
+					ReplyUid: strconv.Itoa(thanksGiver.giftNameUidTable[name]),
+				})
+			} else {
+				logic.PushToBulletSender(text)
+			}
+			delete(thanksGiver.giftBlindBoxTable, name)
+			continue
 		}
 
 		ms := []rune(msg)
@@ -184,12 +234,14 @@ func summarizeBlindGift(danmuLen int, svcCtx *svc.ServiceContext) {
 func summarizeGift(danmuLen int, minCost int, svcCtx *svc.ServiceContext) {
 	for name, m := range thanksGiver.giftNotBlindBoxTable {
 		sumCost := 0
+		sumCount := 0
 		giftstring := []string{}
 		msg := ""
 		for gift, cost := range m {
 			giftstring = append(giftstring, fmt.Sprintf("%d个%s", cost["count"], gift))
 			// 计算打赏金额
 			sumCost += cost["cost"]
+			sumCount += cost["count"]
 
 			// 感谢完后立刻清空map
 			delete(m, gift)
@@ -212,10 +264,31 @@ func summarizeGift(danmuLen int, minCost int, svcCtx *svc.ServiceContext) {
 			}
 		}
 
-		ms := []rune(msg)
+		giftText := strings.Join(giftstring, "，")
 		if sumCost < minCost {
 			logx.Infof("礼物感谢跳过: uname=%s gifts=%v cost=%d minCost=%d", name, giftstring, sumCost, minCost)
-		} else if len(ms) > danmuLen {
+			delete(thanksGiver.giftNotBlindBoxTable, name)
+			continue
+		}
+		if len(svcCtx.Config.ThanksGiftDanmu) > 0 {
+			tpl := svcCtx.Config.ThanksGiftDanmu[rand.Intn(len(svcCtx.Config.ThanksGiftDanmu))]
+			text := renderThanks(tpl, name, giftText, sumCount, sumCost)
+			if svcCtx.Config.ThanksGiftUseAt {
+				logic.PushToBulletSender(text, &entity.DanmuMsgTextReplyInfo{
+					ReplyUid: strconv.Itoa(thanksGiver.giftNameUidTable[name]),
+				})
+			} else {
+				logic.PushToBulletSender(text)
+			}
+			if sumCost >= 50000 {
+				logic.PushToBulletSender(name + "老板大气大气")
+			}
+			delete(thanksGiver.giftNotBlindBoxTable, name)
+			continue
+		}
+
+		ms := []rune(msg)
+		if len(ms) > danmuLen {
 			if !svcCtx.Config.ThanksGiftUseAt {
 				logic.PushToBulletSender("感谢 " + name + " 的")
 				logic.PushToBulletSender(msgShort)

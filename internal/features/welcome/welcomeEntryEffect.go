@@ -28,7 +28,7 @@ func registerEntryEffect(c *client.Client, svcCtx *svc.ServiceContext) {
 			return
 		}
 
-		if v, ok := svcCtx.Config.WelcomeString[fmt.Sprint(entry.Data.Uid)]; svcCtx.Config.WelcomeSwitch && ok && svcCtx.Config.EntryEffect {
+		if v, ok := svcCtx.Config.WelcomeString[fmt.Sprint(entry.Data.Uid)]; svcCtx.Config.WelcomeSwitch && ok && v != "" && svcCtx.Config.EntryEffect {
 			PushToInterractChan(&InterractData{
 				Uid: entry.Data.Uid,
 				Msg: v,
