@@ -94,12 +94,17 @@ func NewWsHandler() WsHandler {
 }
 func (ws *wsHandler) ReloadConfig() error {
 	ctx, err := mustloadConfig()
-	oldconfig := *ws.svc.Config
 	if err != nil {
 		return err
 	}
-	ws.svc.Config = ctx.Config
-	if ctx.Config.RoomId != oldconfig.RoomId {
+	oldconfig := *ws.svc.Config
+	ctx.RobotID = ws.svc.RobotID
+	ctx.UserID = ws.svc.UserID
+	ctx.AnchorName = ws.svc.AnchorName
+	ctx.Autointerract = ws.svc.Autointerract
+
+	roomChanged := ctx.Config.RoomId != oldconfig.RoomId
+	if roomChanged {
 		logx.Infof("房间号更改，更换房间号 ：%v", ctx.Config.RoomId)
 		ws.client.Stop()
 		ws.client = client.NewClient(ctx.Config.RoomId)
@@ -107,11 +112,17 @@ func (ws *wsHandler) ReloadConfig() error {
 		roominfo, err := http.RoomInit(ctx.Config.RoomId)
 		if err != nil {
 			logx.Error(err)
-			//return err
+		} else {
+			ctx.UserID = roominfo.Data.Uid
 		}
-		ctx.UserID = roominfo.Data.Uid
-		err = ws.client.Start()
-		if err != nil {
+		if userinfo, err := http.Userinfo(ctx.Config.RoomId); err == nil && userinfo != nil {
+			ctx.AnchorName = userinfo.Data.Info.Uname
+		}
+	}
+	ws.svc = ctx
+
+	if roomChanged {
+		if err := ws.client.Start(); err != nil {
 			return err
 		}
 		ws.registerHandler()

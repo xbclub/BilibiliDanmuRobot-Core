@@ -44,6 +44,9 @@ func (w *wsHandler) welcomeInteractWord() {
 }
 
 func (w *wsHandler) handleInteractEvent(uid int64, uname string, msgType int32, medal *entity.FansMedalInfo) {
+	if msgType == 1 {
+		logx.Infof("进场事件 uid=%v uname=%v", uid, uname)
+	}
 	switch msgType {
 	case 1:
 		w.handleEnter(uid, uname, medal)
@@ -69,9 +72,11 @@ func (w *wsHandler) handleEnter(uid int64, uname string, medal *entity.FansMedal
 		return
 	}
 	if !w.svc.Config.InteractWord {
+		logx.Infof("进场跳过: InteractWord=false uid=%v uname=%v", uid, uname)
 		return
 	}
 	if inWide(uname, w.svc.Config.WelcomeBlacklistWide) || in(uname, w.svc.Config.WelcomeBlacklist) {
+		logx.Infof("进场跳过: 黑名单 uid=%v uname=%v", uid, uname)
 		return
 	}
 
@@ -144,6 +149,7 @@ func (w *wsHandler) handleShare(uid int64, uname string) {
 
 func (w *wsHandler) tierWelcome(uid int64, uname string, medal *entity.FansMedalInfo) (string, bool) {
 	if len(w.svc.Config.WelcomeFan) == 0 && len(w.svc.Config.WelcomeNew) == 0 && len(w.svc.Config.WelcomeBack) == 0 {
+		logx.Infof("三档欢迎: uid=%v uname=%v 三组模板均为空，回退旧逻辑", uid, uname)
 		return "", false
 	}
 	first := false
@@ -154,18 +160,25 @@ func (w *wsHandler) tierWelcome(uid int64, uname string, medal *entity.FansMedal
 			logx.Errorf("记录进场失败 uid=%v: %v", uid, err)
 		}
 	}
+	isFan := w.isFan(medal)
 
 	var pool []string
+	tier := ""
 	switch {
-	case w.isFan(medal) && len(w.svc.Config.WelcomeFan) > 0:
+	case isFan && len(w.svc.Config.WelcomeFan) > 0:
 		pool = w.svc.Config.WelcomeFan
+		tier = "fan"
 	case first && len(w.svc.Config.WelcomeNew) > 0:
 		pool = w.svc.Config.WelcomeNew
+		tier = "new"
 	case !first && len(w.svc.Config.WelcomeBack) > 0:
 		pool = w.svc.Config.WelcomeBack
+		tier = "back"
 	default:
+		logx.Infof("三档欢迎: uid=%v uname=%v first=%v isFan=%v 无匹配模板，回退旧逻辑", uid, uname, first, isFan)
 		return "", false
 	}
+	logx.Infof("三档欢迎: uid=%v uname=%v first=%v isFan=%v tier=%s", uid, uname, first, isFan, tier)
 	return renderWelcome(pool[rand.Intn(len(pool))], uname, medal, w.svc), true
 }
 

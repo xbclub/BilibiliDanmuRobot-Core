@@ -71,7 +71,7 @@ func Interact(ctx context.Context, svcCtx *svc.ServiceContext) {
 			//interractGiver.tmpmsg = append(interractGiver.tmpmsg, *g)
 			interractGiver.locked.Lock()
 			if value, ok := interractGiver.interractFilter[g.Uid]; ok && value.Add(w).Unix() >= time.Now().Unix() {
-				logx.Debugf("用户 %v 10秒内重复欢迎已被过滤", g.Uid)
+				logx.Infof("用户 %v 10秒内重复欢迎已被过滤", g.Uid)
 			} else {
 				parts := strings.Split(g.Msg, "\n")
 				for _, s := range parts {
