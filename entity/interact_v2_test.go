@@ -15,7 +15,7 @@ func TestParseInteractWordV2(t *testing.T) {
 		t.Fatal("FansMedal is nil")
 	}
 	m := got.FansMedal
-	if m.TargetID != 3546384651258599 || m.MedalLevel != 21 || m.MedalName != "做猫的" || m.IsLighted != 1 || m.AnchorRoomid != 30827248 {
+	if m.TargetID != 3546384651258599 || m.MedalLevel != 21 || m.MedalName != "做猫的" || m.IsLighted != 1 || m.AnchorRoomid != 30827248 || m.GuardLevel != 0 {
 		t.Fatalf("unexpected medal: %+v", m)
 	}
 }
