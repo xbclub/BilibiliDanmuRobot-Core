@@ -31,39 +31,7 @@ func registerGifts(c *client.Client, svcCtx *svc.ServiceContext) {
 		danmuproc.SaveBlindBoxStat(send, svcCtx)
 	})
 	c.RegisterCustomEventHandler("SEND_GIFT_V2", func(s string) {
-		svcCtx.EventRLock()
-		defer svcCtx.EventRUnlock()
-		var msg entity.SendGiftV2Text
-		if err := json.Unmarshal([]byte(s), &msg); err != nil {
-			logx.Errorf("SEND_GIFT_V2 解析失败: %v", err)
-			return
-		}
-		pb := msg.Data.Pb
-		if pb == "" {
-			pb = msg.Data.Data.Pb
-		}
-		if pb == "" {
-			logx.Info("SEND_GIFT_V2 没有 pb 字段")
-			return
-		}
-		gift, err := entity.ParseSendGiftV2(pb)
-		if err != nil {
-			logx.Errorf("SEND_GIFT_V2 pb 解析失败: %v", err)
-			return
-		}
-		if len(gift.Gifts) == 0 {
-			logx.Infof("SEND_GIFT_V2 未解析到礼物 uid=%d uname=%s", gift.UID, gift.Uname)
-			return
-		}
-		for _, item := range gift.Gifts {
-			send := gift.ToSendGiftText(item)
-			if svcCtx.Config.ThanksGift {
-				logx.Infof("收到礼物(V2) uname=%s gift=%s num=%d price=%d total=%d",
-					send.Data.Uname, send.Data.GiftName, send.Data.Num, send.Data.Price, send.Data.TotalCoin)
-				PushToGiftChan(send)
-			}
-			danmuproc.SaveBlindBoxStat(send, svcCtx)
-		}
+		onSendGiftV2Raw(svcCtx, s)
 	})
 	c.RegisterCustomEventHandler("GUARD_BUY", func(s string) {
 		svcCtx.EventRLock()
@@ -100,4 +68,42 @@ func registerGifts(c *client.Client, svcCtx *svc.ServiceContext) {
 			}
 		}
 	})
+}
+
+// onSendGiftV2Raw 处理 SEND_GIFT_V2 原始报文（pb 双形态回退 + 解码 + 入队），
+// 抽出以便录制数据回放测试
+func onSendGiftV2Raw(svcCtx *svc.ServiceContext, s string) {
+	svcCtx.EventRLock()
+	defer svcCtx.EventRUnlock()
+	var msg entity.SendGiftV2Text
+	if err := json.Unmarshal([]byte(s), &msg); err != nil {
+		logx.Errorf("SEND_GIFT_V2 解析失败: %v", err)
+		return
+	}
+	pb := msg.Data.Pb
+	if pb == "" {
+		pb = msg.Data.Data.Pb
+	}
+	if pb == "" {
+		logx.Info("SEND_GIFT_V2 没有 pb 字段")
+		return
+	}
+	gift, err := entity.ParseSendGiftV2(pb)
+	if err != nil {
+		logx.Errorf("SEND_GIFT_V2 pb 解析失败: %v", err)
+		return
+	}
+	if len(gift.Gifts) == 0 {
+		logx.Infof("SEND_GIFT_V2 未解析到礼物 uid=%d uname=%s", gift.UID, gift.Uname)
+		return
+	}
+	for _, item := range gift.Gifts {
+		send := gift.ToSendGiftText(item)
+		if svcCtx.Config.ThanksGift {
+			logx.Infof("收到礼物(V2) uname=%s gift=%s num=%d price=%d total=%d",
+				send.Data.Uname, send.Data.GiftName, send.Data.Num, send.Data.Price, send.Data.TotalCoin)
+			PushToGiftChan(send)
+		}
+		danmuproc.SaveBlindBoxStat(send, svcCtx)
+	}
 }

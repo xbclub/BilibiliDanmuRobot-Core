@@ -19,33 +19,43 @@ import (
 
 func registerInteractWord(c *client.Client, svcCtx *svc.ServiceContext) {
 	c.RegisterCustomEventHandler("INTERACT_WORD", func(s string) {
-		var interact entity.InteractWordText
-		if err := json.Unmarshal([]byte(s), &interact); err != nil {
-			logx.Errorf("INTERACT_WORD 解析失败: %v", err)
-			return
-		}
-		svcCtx.EventRLock()
-		handleInteractEvent(svcCtx, interact.Data.Uid, interact.Data.Uname, interact.Data.MsgType, interact.Data.FansMedal)
-		svcCtx.EventRUnlock()
+		onInteractWordRaw(svcCtx, s)
 	})
 	c.RegisterCustomEventHandler("INTERACT_WORD_V2", func(s string) {
-		var interact entity.InteractWordV2Text
-		if err := json.Unmarshal([]byte(s), &interact); err != nil {
-			logx.Errorf("INTERACT_WORD_V2 解析失败: %v", err)
-			return
-		}
-		if interact.Data.Pb == "" {
-			return
-		}
-		ev, err := entity.ParseInteractWordV2(interact.Data.Pb)
-		if err != nil {
-			logx.Errorf("INTERACT_WORD_V2 pb 解析失败: %v", err)
-			return
-		}
-		svcCtx.EventRLock()
-		handleInteractEvent(svcCtx, ev.UID, ev.Uname, ev.MsgType, ev.FansMedal)
-		svcCtx.EventRUnlock()
+		onInteractWordV2Raw(svcCtx, s)
 	})
+}
+
+// onInteractWordRaw 处理 INTERACT_WORD 原始报文，抽出以便录制数据回放测试
+func onInteractWordRaw(svcCtx *svc.ServiceContext, s string) {
+	var interact entity.InteractWordText
+	if err := json.Unmarshal([]byte(s), &interact); err != nil {
+		logx.Errorf("INTERACT_WORD 解析失败: %v", err)
+		return
+	}
+	svcCtx.EventRLock()
+	handleInteractEvent(svcCtx, interact.Data.Uid, interact.Data.Uname, interact.Data.MsgType, interact.Data.FansMedal)
+	svcCtx.EventRUnlock()
+}
+
+// onInteractWordV2Raw 处理 INTERACT_WORD_V2 原始报文（内含 pb 解码）
+func onInteractWordV2Raw(svcCtx *svc.ServiceContext, s string) {
+	var interact entity.InteractWordV2Text
+	if err := json.Unmarshal([]byte(s), &interact); err != nil {
+		logx.Errorf("INTERACT_WORD_V2 解析失败: %v", err)
+		return
+	}
+	if interact.Data.Pb == "" {
+		return
+	}
+	ev, err := entity.ParseInteractWordV2(interact.Data.Pb)
+	if err != nil {
+		logx.Errorf("INTERACT_WORD_V2 pb 解析失败: %v", err)
+		return
+	}
+	svcCtx.EventRLock()
+	handleInteractEvent(svcCtx, ev.UID, ev.Uname, ev.MsgType, ev.FansMedal)
+	svcCtx.EventRUnlock()
 }
 
 func handleInteractEvent(svcCtx *svc.ServiceContext, uid int64, uname string, msgType int32, medal *entity.FansMedalInfo) {
