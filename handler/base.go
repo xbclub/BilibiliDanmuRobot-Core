@@ -111,18 +111,20 @@ func (ws *wsHandler) ReloadConfig() error {
 		anchorName = userinfo.Data.Info.Uname
 	}
 
-	// 先把新连接完全立起来，任何一步失败都直接返回，旧连接与旧上下文零改动
+	// 先构建新房上下文：NewServiceContext 若 panic（磁盘级故障），
+	// 此时尚未启动任何新连接，不会遗留孤儿 WS
+	ctx := svc.NewServiceContext(c)
+	ctx.RobotID = ws.svc.RobotID
+	ctx.UserID = roominfo.Data.Uid
+	ctx.AnchorName = anchorName
+
+	// 再把新连接完全立起来，任何一步失败都直接返回，旧连接与旧上下文零改动
 	newCli := client.NewClient(c.RoomId)
 	newCli.SetCookie(biliapi.CookieStr)
 	if err := newCli.Start(); err != nil {
 		logx.Errorf("新房间连接失败，保持原房间 %v: %v", oldconfig.RoomId, err)
 		return err
 	}
-
-	ctx := svc.NewServiceContext(c)
-	ctx.RobotID = ws.svc.RobotID
-	ctx.UserID = roominfo.Data.Uid
-	ctx.AnchorName = anchorName
 
 	// 新连接就绪后再切换：先停旧连接收口旧房事件，再原地更新原有
 	// ServiceContext（写侧加锁，常驻 goroutine 捕获的 ws.svc 指针不变），
