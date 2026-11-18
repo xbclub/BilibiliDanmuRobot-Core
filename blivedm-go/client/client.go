@@ -14,6 +14,8 @@ import (
 	"github.com/gorilla/websocket"
 	"github.com/xbclub/BilibiliDanmuRobot-Core/blivedm-go/api"
 	"github.com/xbclub/BilibiliDanmuRobot-Core/blivedm-go/packet"
+	"github.com/xbclub/BilibiliDanmuRobot-Core/browserclient"
+	"github.com/xbclub/BilibiliDanmuRobot-Core/webprofile"
 )
 
 type Client struct {
@@ -74,13 +76,17 @@ func (c *Client) init() error {
 		if err != nil {
 			return err
 		}
-		c.Cookie += fmt.Sprintf("buvid3=%s", b3)
+		// 按浏览器格式拼接（"k=v; k=v"），不再依赖上游 cookie 以分号结尾
+		if len(c.Cookie) > 0 && !strings.HasSuffix(c.Cookie, ";") {
+			c.Cookie += "; "
+		}
+		c.Cookie += "buvid3=" + b3
 	}
 
 	roomInfo, err := api.GetRoomInfo(c.RoomID)
 	// 失败降级
 	if err != nil || roomInfo.Code != 0 {
-		return errors.New(fmt.Sprintf("room=%s init GetRoomInfo fialed, %s", c.RoomID, err))
+		return errors.New(fmt.Sprintf("room=%d init GetRoomInfo fialed, %s", c.RoomID, err))
 	}
 	c.RoomID = roomInfo.Data.RoomId
 	if c.host == "" {
@@ -98,13 +104,21 @@ func (c *Client) init() error {
 	return nil
 }
 
+// wsDialer TLS 握手走 Chrome 指纹（browserclient），HTTP/1.1 upgrade 语义不变
+var wsDialer = websocket.Dialer{
+	NetDialTLSContext: browserclient.DialTLSContext,
+	HandshakeTimeout:  45 * time.Second,
+}
+
 func (c *Client) connect() error {
 	reqHeader := &http.Header{}
-	reqHeader.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/102.0.0.0 Safari/537.36")
+	reqHeader.Set("User-Agent", webprofile.UserAgent)
+	// 浏览器从直播页发起的 WS 握手会携带 Origin
+	reqHeader.Set("Origin", webprofile.LiveOrigin)
 retry:
 	c.host = c.hostList[c.retryCount%len(c.hostList)]
 	c.retryCount++
-	conn, res, err := websocket.DefaultDialer.Dial(fmt.Sprintf("wss://%s/sub", c.host), *reqHeader)
+	conn, res, err := wsDialer.Dial(fmt.Sprintf("wss://%s/sub", c.host), *reqHeader)
 	if err != nil {
 		log.Errorf("connect dial failed, retry %d times", c.retryCount)
 		time.Sleep(2 * time.Second)

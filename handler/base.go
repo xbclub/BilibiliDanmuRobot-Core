@@ -6,15 +6,20 @@ import (
 	"fmt"
 	_ "github.com/glebarez/go-sqlite"
 	"github.com/robfig/cron/v3"
+	"github.com/xbclub/BilibiliDanmuRobot-Core/biliapi"
 	"github.com/xbclub/BilibiliDanmuRobot-Core/blivedm-go/client"
 	_ "github.com/xbclub/BilibiliDanmuRobot-Core/blivedm-go/utils"
 	"github.com/xbclub/BilibiliDanmuRobot-Core/config"
 	"github.com/xbclub/BilibiliDanmuRobot-Core/entity"
-	"github.com/xbclub/BilibiliDanmuRobot-Core/http"
+	"github.com/xbclub/BilibiliDanmuRobot-Core/internal/features/danmuproc"
+	"github.com/xbclub/BilibiliDanmuRobot-Core/internal/features/notice"
+	"github.com/xbclub/BilibiliDanmuRobot-Core/internal/features/pk"
+	"github.com/xbclub/BilibiliDanmuRobot-Core/internal/features/robot"
+	"github.com/xbclub/BilibiliDanmuRobot-Core/internal/features/thanksgift"
+	"github.com/xbclub/BilibiliDanmuRobot-Core/internal/features/welcome"
 	"github.com/xbclub/BilibiliDanmuRobot-Core/logic"
-	"github.com/xbclub/BilibiliDanmuRobot-Core/logic/danmu"
+	"github.com/xbclub/BilibiliDanmuRobot-Core/qrcode"
 	"github.com/xbclub/BilibiliDanmuRobot-Core/svc"
-	"github.com/xbclub/BilibiliDanmuRobot-Core/utiles"
 	"github.com/zeromicro/go-zero/core/conf"
 	"github.com/zeromicro/go-zero/core/logx"
 	"math/rand"
@@ -27,24 +32,9 @@ import (
 type wsHandler struct {
 	client *client.Client
 	svc    *svc.ServiceContext
-	// 机器人
-	robotBulletCtx    context.Context
-	robotBulletCancel context.CancelFunc
-	// 弹幕发送
-	sendBulletCtx    context.Context
-	sendBulletCancel context.CancelFunc
-	// 特效欢迎
-	ineterractCtx    context.Context
-	ineterractCancel context.CancelFunc
-	//礼物感谢
-	thanksGiftCtx   context.Context
-	thankGiftCancel context.CancelFunc
-	//pk提醒
-	pkCtx    context.Context
-	pkCancel context.CancelFunc
-	//弹幕处理
-	danmuLogicCtx    context.Context
-	danmuLogicCancel context.CancelFunc
+	// 各功能 worker 的统一生命周期
+	logicCtx    context.Context
+	logicCancel context.CancelFunc
 	//定时弹幕
 	corndanmu           *cron.Cron
 	mapCronDanmuSendIdx map[int]int
@@ -65,7 +55,7 @@ func NewWsHandler() WsHandler {
 		return nil
 	}
 	ws.client = client.NewClient(ctx.Config.RoomId)
-	ws.client.SetCookie(http.CookieStr)
+	ws.client.SetCookie(biliapi.CookieStr)
 	ws.svc = ctx
 	//初始化定时弹幕
 	ws.corndanmu = cron.New(cron.WithParser(cron.NewParser(
@@ -74,14 +64,14 @@ func NewWsHandler() WsHandler {
 	ws.mapCronDanmuSendIdx = make(map[int]int)
 
 	// 设置uid作为基本配置
-	strUserId, ok := http.CookieList["DedeUserID"]
+	strUserId, ok := biliapi.CookieList["DedeUserID"]
 	if !ok {
 		logx.Infof("uid加载失败，请重新登录")
 		return nil
 	}
 	ws.userId, err = strconv.Atoi(strUserId)
 	ctx.RobotID = strUserId
-	roominfo, err := http.RoomInit(ctx.Config.RoomId)
+	roominfo, err := biliapi.RoomInit(ctx.Config.RoomId)
 	if err != nil {
 		logx.Error(err)
 		//return nil
@@ -100,8 +90,8 @@ func (ws *wsHandler) ReloadConfig() error {
 		logx.Infof("房间号更改，更换房间号 ：%v", ctx.Config.RoomId)
 		ws.client.Stop()
 		ws.client = client.NewClient(ctx.Config.RoomId)
-		ws.client.SetCookie(http.CookieStr)
-		roominfo, err := http.RoomInit(ctx.Config.RoomId)
+		ws.client.SetCookie(biliapi.CookieStr)
+		roominfo, err := biliapi.RoomInit(ctx.Config.RoomId)
 		if err != nil {
 			logx.Error(err)
 			//return err
@@ -140,19 +130,19 @@ func (w *wsHandler) InitStartWsClient() {
 }
 func (w *wsHandler) StartWsClient() error {
 	if w.svc.Config.EntryMsg != "off" {
-		err := http.Send(w.svc.Config.EntryMsg, w.svc)
+		err := biliapi.Send(w.svc.Config.EntryMsg, w.svc)
 		if err != nil {
 			logx.Error(err)
 		}
 	}
 	w.corndanmu.Start()
 	w.client = client.NewClient(w.svc.Config.RoomId)
-	w.client.SetCookie(http.CookieStr)
+	w.client.SetCookie(biliapi.CookieStr)
 	w.registerHandler()
 	return w.client.Start()
 }
 func (w *wsHandler) GetUserinfo() *entity.UserinfoLite {
-	return http.GetUserInfo()
+	return biliapi.GetUserInfo()
 }
 func (w *wsHandler) GetSvc() svc.ServiceContext {
 	return *w.svc
@@ -163,23 +153,8 @@ func (w *wsHandler) StopWsClient() {
 	//w.svc.Db.Db.Close()
 }
 func (w *wsHandler) StopChanel() {
-	if w.sendBulletCancel != nil {
-		w.sendBulletCancel()
-	}
-	if w.robotBulletCancel != nil {
-		w.robotBulletCancel()
-	}
-	if w.thankGiftCancel != nil {
-		w.thankGiftCancel()
-	}
-	if w.ineterractCancel != nil {
-		w.ineterractCancel() // 关闭弹幕姬goroutine
-	}
-	if w.pkCancel != nil {
-		w.pkCancel()
-	}
-	if w.danmuLogicCancel != nil {
-		w.danmuLogicCancel()
+	if w.logicCancel != nil {
+		w.logicCancel()
 	}
 	for _, i := range w.corndanmu.Entries() {
 		w.corndanmu.Remove(i.ID)
@@ -187,25 +162,9 @@ func (w *wsHandler) StopChanel() {
 }
 func (w *wsHandler) SayGoodbye() {
 	if len(w.svc.Config.GoodbyeInfo) > 0 {
-
-		var danmuLen = w.svc.Config.DanmuLen
-		var msgdata []string
-		msgrun := []rune(w.svc.Config.GoodbyeInfo)
-		msgLen := len(msgrun)
-		msgcount := msgLen / danmuLen
-		tmpmsgcount := msgLen % danmuLen
-		if tmpmsgcount != 0 {
-			msgcount += 1
-		}
-		for m := 1; m <= msgcount; m++ {
-			if msgLen < m*danmuLen {
-				msgdata = append(msgdata, string(msgrun[(m-1)*danmuLen:msgLen]))
-				continue
-			}
-			msgdata = append(msgdata, string(msgrun[(m-1)*danmuLen:danmuLen*m]))
-		}
+		msgdata := logic.SplitDanmu(w.svc.Config.GoodbyeInfo, w.svc.Config.DanmuLen)
 		for _, msgs := range msgdata {
-			err := http.Send(msgs, w.svc)
+			err := biliapi.Send(msgs, w.svc)
 			if err != nil {
 				logx.Errorf("下播弹幕发送失败：%s msg: %s", err, msgs)
 			}
@@ -215,62 +174,50 @@ func (w *wsHandler) SayGoodbye() {
 	}
 }
 func (w *wsHandler) startLogic() {
-	w.sendBulletCtx, w.sendBulletCancel = context.WithCancel(context.Background())
-	go logic.StartSendBullet(w.sendBulletCtx, w.svc)
+	w.logicCtx, w.logicCancel = context.WithCancel(context.Background())
+	// 中央弹幕发送队列
+	go logic.StartSendBullet(w.logicCtx, w.svc)
 	logx.Info("弹幕推送已开启...")
+	// 弹幕解析分发
+	go danmuproc.Run(w.logicCtx, w.svc)
 	// 机器人
-	w.robotBulletCtx, w.robotBulletCancel = context.WithCancel(context.Background())
-	go logic.StartBulletRobot(w.robotBulletCtx, w.svc)
-	// 弹幕逻辑
-	w.danmuLogicCtx, w.danmuLogicCancel = context.WithCancel(context.Background())
-	go danmu.StartDanmuLogic(w.danmuLogicCtx, w.svc)
-
+	go robot.Run(w.logicCtx, w.svc)
 	logx.Info("弹幕机器人已开启")
-	// 特效欢迎
-	w.ineterractCtx, w.ineterractCancel = context.WithCancel(context.Background())
-	go logic.Interact(w.ineterractCtx, w.svc)
-
+	// 欢迎模块
+	go welcome.Run(w.logicCtx, w.svc)
 	logx.Info("欢迎模块已开启")
-
 	// 礼物感谢
-	w.thanksGiftCtx, w.thankGiftCancel = context.WithCancel(context.Background())
-	go logic.ThanksGift(w.thanksGiftCtx, w.svc)
-
+	go thanksgift.Run(w.logicCtx, w.svc)
 	logx.Info("礼物感谢已开启")
 	// pk提醒
-	w.pkCtx, w.pkCancel = context.WithCancel(context.Background())
-	go logic.PK(w.pkCtx, w.svc)
+	go pk.Run(w.logicCtx, w.svc)
 
 	// 下播提醒
 	// w.sayGoodbyeByWs()
 
 	//定时弹幕
 	w.corndanmuStart()
-
-	//w.registerHandler()
 }
 func (w *wsHandler) registerHandler() {
-	w.welcomeEntryEffect()
-	w.welcomeInteractWord()
+	// 欢迎（进场特效、进场消息、天选互锁）
+	welcome.Register(w.client, w.svc)
+	// 弹幕解析分发
+	danmuproc.Register(w.client, w.svc)
 	logx.Info("弹幕处理已开启")
-	w.receiveDanmu()
-	// 天选自动关闭欢迎
-	w.anchorLot()
+	// pk提醒
+	pk.Register(w.client, w.svc)
 	logx.Info("pk提醒已开启")
-	w.pkBattleStart()
-	w.pkBattleEnd()
 	// 禁言用户提醒
-	w.blockUser()
-	w.thankGifts()
-	// 红包
-	w.redPocket()
+	notice.Register(w.client, w.svc)
+	// 礼物感谢 + 红包
+	thanksgift.Register(w.client, w.svc)
 }
 func (w *wsHandler) starthttp() error {
 	var err error
-	http.InitHttpClient()
+	biliapi.InitHttpClient()
 	// 判断是否存在历史cookie
-	if http.FileExists("token/bili_token.txt") && http.FileExists("token/bili_token.json") {
-		err = http.SetHistoryCookie()
+	if biliapi.FileExists("token/bili_token.txt") && biliapi.FileExists("token/bili_token.json") {
+		err = biliapi.SetHistoryCookie()
 		if err != nil {
 			logx.Error("用户登录失败")
 			return err
@@ -289,19 +236,19 @@ func (w *wsHandler) starthttp() error {
 }
 func (w *wsHandler) userlogin() error {
 	var err error
-	http.InitHttpClient()
+	biliapi.InitHttpClient()
 	var loginUrl *entity.LoginUrl
-	if loginUrl, err = http.GetLoginUrl(); err != nil {
+	if loginUrl, err = biliapi.GetLoginUrl(); err != nil {
 		logx.Error(err)
 		return err
 	}
 
-	if err = utiles.GenerateQr(loginUrl.Data.Url); err != nil {
+	if err = qrcode.Generate(loginUrl.Data.Url); err != nil {
 		logx.Error(err)
 		return err
 	}
 
-	if _, err = http.GetLoginInfo(loginUrl.Data.OauthKey); err != nil {
+	if _, err = biliapi.GetLoginInfo(loginUrl.Data.OauthKey); err != nil {
 		logx.Error(err)
 		return err
 	}
@@ -353,7 +300,7 @@ func mustloadConfig() (*svc.ServiceContext, error) {
 	logx.DisableStat()
 	//配置数据库文件夹
 	info, err := os.Stat(c.DBPath)
-	if os.IsNotExist(err) || !info.IsDir() {
+	if err != nil || !info.IsDir() {
 		err = os.MkdirAll(c.DBPath, 0777)
 		if err != nil {
 			logx.Errorf("文件夹创建失败：%s", c.DBPath)

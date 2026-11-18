@@ -59,7 +59,7 @@ func WriteConfig(data string) *ConfigResponse {
 	}
 	yamlBytes, err := yaml.Marshal(&c)
 	if err != nil {
-		logx.Error("Failed to marshal YAML: %v", err)
+		logx.Errorf("Failed to marshal YAML: %v", err)
 		resp.Code = false
 		resp.Msg = err.Error()
 		return resp
@@ -76,14 +76,14 @@ func WriteConfig(data string) *ConfigResponse {
 	}
 	file, err := os.OpenFile("etc/bilidanmaku-api.yaml", os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0666)
 	if err != nil {
-		logx.Errorf("打开文件错误：", err)
+		logx.Errorf("打开文件错误：%v", err)
 		resp.Code = false
 		resp.Msg = "打开文件错误：" + err.Error()
 		return resp
 	}
 	_, err = file.Write(yamlBytes)
 	if err != nil {
-		logx.Errorf("文件写入错误：", err)
+		logx.Errorf("文件写入错误：%v", err)
 		resp.Code = false
 		resp.Msg = "文件写入错误：" + err.Error()
 		return resp

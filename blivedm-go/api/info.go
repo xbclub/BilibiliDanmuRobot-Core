@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/tidwall/gjson"
+	"github.com/xbclub/BilibiliDanmuRobot-Core/webprofile"
 	log "github.com/zeromicro/go-zero/core/logx"
 	"net/http"
 	"net/url"
@@ -66,6 +67,10 @@ type DanmuInfo struct {
 func GetUid(cookie string) (int, string, error) {
 	headers := &http.Header{}
 	headers.Set("cookie", cookie)
+	// nav 为主站域接口，补齐浏览器特征头
+	for k, v := range webprofile.MainHeaders() {
+		headers.Set(k, v)
+	}
 	resp, err := HttpGet("https://api.bilibili.com/x/web-interface/nav", headers)
 	if err != nil {
 		return 0, "", err
@@ -164,6 +169,9 @@ type BuvidData struct {
 
 func GetBuvid3A4() (buvid3, buvid4 string, err error) {
 	headers := &http.Header{}
+	// spi 为主站域接口
+	headers.Set("Origin", webprofile.MainOrigin)
+	headers.Set("Referer", webprofile.MainReferer)
 	roomIDurl := "https://api.bilibili.com/x/frontend/finger/spi"
 	result := &BuvidData{}
 	err = GetJsonWithHeader(roomIDurl, headers, result)
@@ -179,9 +187,9 @@ func GetDanmuInfo(roomID int, cookie string, wbiMixinKey string) (*DanmuInfo, er
 	result := &DanmuInfo{}
 	headers := &http.Header{}
 	headers.Set("cookie", cookie)
-	//headers.Set("content-type", "application/json")
-	//headers.Set("accept-encoding", "gzip, deflate, br, zstd")
-	//headers.Set("accept-language", "zh-CN,zh;q=0.9,en-US;q=0.8,en;q=0.7")
+	// getDanmuInfo 为直播域接口
+	headers.Set("Origin", webprofile.LiveOrigin)
+	headers.Set("Referer", webprofile.LiveReferer)
 	params := fmt.Sprintf("id=%d&type=0", roomID)
 	params = toWbiParamSafe(params, wbiMixinKey)
 	roomIDurl := fmt.Sprintf("https://api.live.bilibili.com/xlive/web-room/v1/index/getDanmuInfo?%s", params)

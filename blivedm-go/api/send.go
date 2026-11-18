@@ -6,6 +6,9 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+
+	"github.com/xbclub/BilibiliDanmuRobot-Core/browserclient"
+	"github.com/xbclub/BilibiliDanmuRobot-Core/webprofile"
 )
 
 type DanmakuRequest struct {
@@ -38,7 +41,7 @@ type BiliVerify struct {
 
 // SendDanmaku https://api.live.bilibili.com/msg/send
 func SendDanmaku(d *DanmakuRequest, v *BiliVerify) (*SendDanmakuResp, error) {
-	client := &http.Client{}
+	client := browserclient.Client()
 	result := &SendDanmakuResp{}
 	form := url.Values{
 		"bubble":     {d.Bubble},
@@ -60,8 +63,14 @@ func SendDanmaku(d *DanmakuRequest, v *BiliVerify) (*SendDanmakuResp, error) {
 		return nil, err
 	}
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	req.Header.Set("Cookie", fmt.Sprintf("bili_jct=%s;SESSDATA=%s", v.Csrf, v.SessData))
+	req.Header.Set("Cookie", fmt.Sprintf("bili_jct=%s; SESSDATA=%s", v.Csrf, v.SessData))
+	for k, v := range webprofile.LiveHeaders() {
+		req.Header.Set(k, v)
+	}
 	resp, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
 	defer resp.Body.Close()
 
 	if err := json.NewDecoder(resp.Body).Decode(result); err != nil {
