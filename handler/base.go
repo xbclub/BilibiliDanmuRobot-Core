@@ -109,7 +109,23 @@ func (ws *wsHandler) ReloadConfig() error {
 			ctx.AnchorName = userinfo.Data.Info.Uname
 		}
 	}
-	ws.svc = ctx
+	// 原地更新原有 ServiceContext：常驻 goroutine（弹幕推送/欢迎/礼物/PK 等）
+	// 在启动时捕获了 ws.svc 指针，整体替换会使它们继续读写旧实例，
+	// 导致配置热更新失效、PK 串门 uid 集合与新注册的 handler 断开（PR #33 评审 P0）
+	ws.svc.Config = ctx.Config
+	ws.svc.RobotID = ctx.RobotID
+	ws.svc.UserID = ctx.UserID
+	ws.svc.AnchorName = ctx.AnchorName
+	ws.svc.Autointerract = ctx.Autointerract
+	ws.svc.SignInModel = ctx.SignInModel
+	ws.svc.DanmuCntModel = ctx.DanmuCntModel
+	ws.svc.BlindBoxStatModel = ctx.BlindBoxStatModel
+	ws.svc.VisitModel = ctx.VisitModel
+	if roomChanged {
+		// 换房后清空旧房的 PK 串门 uid 集合；不替换 OtherSideUid 实例，
+		// 保证 pk goroutine 与新注册的 handler 始终读写同一集合
+		ws.svc.OtherSideUid.Clear()
+	}
 
 	if roomChanged {
 		if err := ws.client.Start(); err != nil {
