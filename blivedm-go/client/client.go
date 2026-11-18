@@ -90,6 +90,30 @@ func buvidFromCookie(cookie string) string {
 	return ""
 }
 
+// appendBuvidCookies 确保 cookie 串同时含有 buvid3/buvid4，缺少哪个补哪个；
+// 已存在的键不重复追加，避免同名 cookie 键导致新值被服务器忽略。
+func appendBuvidCookies(cookie, b3, b4 string) string {
+	var parts []string
+	if b3 != "" && !strings.Contains(cookie, "buvid3=") {
+		parts = append(parts, "buvid3="+b3)
+	}
+	if b4 != "" && !strings.Contains(cookie, "buvid4=") {
+		parts = append(parts, "buvid4="+b4)
+	}
+	if len(parts) == 0 {
+		return cookie
+	}
+	if len(cookie) > 0 {
+		// 统一为浏览器的 "k=v; k=v" 格式：结尾是分号也要补空格
+		cookie = strings.TrimRight(cookie, " ")
+		if !strings.HasSuffix(cookie, ";") {
+			cookie += ";"
+		}
+		cookie += " "
+	}
+	return cookie + strings.Join(parts, "; ")
+}
+
 // init 初始化 获取真实 RoomID 和 弹幕服务器 host
 func (c *Client) init() error {
 	if c.Cookie != "" {
@@ -103,19 +127,16 @@ func (c *Client) init() error {
 		}
 		c.Uid = uid
 		c.WbiMixinKey = wbiMixinKey
+		b3, b4, err := api.GetBuvid3A4()
+		if err != nil {
+			return err
+		}
+		// b3/b4 都入 cookie，缺哪个补哪个，不再丢弃 buvid4，也不重复追加
+		c.Cookie = appendBuvidCookies(c.Cookie, b3, b4)
 		// 进房包 buvid 字段应传真实 buvid3，cookie 里没有时再回退 _uuid
 		if v := buvidFromCookie(c.Cookie); v != "" {
 			c.Buvid = v
 		}
-		b3, _, err := api.GetBuvid3A4()
-		if err != nil {
-			return err
-		}
-		// 按浏览器格式拼接（"k=v; k=v"），不再依赖上游 cookie 以分号结尾
-		if len(c.Cookie) > 0 && !strings.HasSuffix(c.Cookie, ";") {
-			c.Cookie += "; "
-		}
-		c.Cookie += "buvid3=" + b3
 	}
 
 	roomInfo, err := api.GetRoomInfo(c.RoomID)
