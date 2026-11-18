@@ -101,10 +101,10 @@ lotteryenable: true
 # lotteryurl: ""
 
 # --- v1.1.23 新增（PR #33 后续提交移植）---
-#RobotEnable: true                    # AI 机器人总开关，false 时 @帮助 不再提示互动、@我是谁 不触发 AI
-#UserNicknames:                       # 熟人昵称：三档欢迎用昵称替代 @昵称
+#robotenable: true                    # AI 机器人总开关，false 时 @帮助 不再提示互动聊天、@我是谁 之后不再触发 AI
+#usernicknames:                       # 熟人昵称：三档欢迎用昵称替代 @昵称
 #  "123456": "小明"
-#ThanksGiftDanmu:                     # 普通礼物感谢话术，占位符 {user}/{gift}/{num}/{cost}（cost 单位元）
+#thanksgiftdanmu:                     # 普通礼物感谢话术，占位符 {user}/{gift}/{num}/{cost}（cost 单位元）
 #  - "感谢{user}的{gift}x{num}，共{cost}元~"
-#ThanksBlindBoxDanmu: []              # 盲盒感谢话术（同上占位符）
-#ThanksGuardDanmu: []                 # 大航海开通感谢话术
+#thanksblindboxdanmu: []              # 盲盒感谢话术（占位符同上，但 {cost} 固定渲染为 0.00）
+#thanksguarddanmu: []                 # 大航海开通感谢话术（占位符同上，{cost} 固定 0.00）

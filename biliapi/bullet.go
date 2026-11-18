@@ -56,7 +56,11 @@ func Send(msg string, svcCtx *svc.ServiceContext, reply ...*entity.DanmuMsgTextR
 			return errors.New(respdata.Msg)
 		}
 		if respdata.Msg == "f" {
-			// code=0 但内容被拒（敏感词/重复/频控），按失败处理进入重试
+			// code=0 但内容被拒（敏感词/重复/频控），按失败处理进入重试。
+			// 注意：重试对「判重/频控」有效（3.5s 间隔后常可过），对「敏感词」
+			// 无效——但 "f" 无法区分两者，保留统一重试；最坏情况单条被拒弹幕
+			// 独占发送槽位约 10.5s（3 次重试 × 3.5s）+ 出口限速 3.5s，
+			// 期间中央发送队列（欢迎/感谢/机器人共享）会被顺延
 			logx.Infof("请求send失败:%s , %s", respdata.Msg, "弹幕内容被服务器拒绝")
 			return errors.New("弹幕内容被服务器拒绝")
 		}
