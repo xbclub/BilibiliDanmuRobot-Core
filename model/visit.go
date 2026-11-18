@@ -3,6 +3,7 @@ package model
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/zeromicro/go-zero/core/logx"
 	"gorm.io/gorm"
@@ -25,10 +26,20 @@ type VisitBase struct {
 	VisitCnt  int64
 }
 
+// visitRetention 进场记录保留窗口，建表/重连时清理长期未访问的行
+const visitRetention = 90 * 24 * 3600
+
 func NewVisitModel(conn *gorm.DB, roomID int64) VisitModel {
 	table := fmt.Sprintf("visit_%v", roomID)
 	if err := conn.Table(table).AutoMigrate(&VisitBase{}); err != nil {
-		logx.Error(err)
+		// 建表失败说明数据库已不可用，静默继续只会让三档欢迎一直走回退路径
+		logx.Must(err)
+	}
+	// 清理保留窗口外的旧记录，避免 per-room 表无限增长
+	if err := conn.Table(table).
+		Where("last_seen < ?", time.Now().Unix()-visitRetention).
+		Delete(&VisitBase{}).Error; err != nil {
+		logx.Errorf("清理进场记录失败 table=%s: %v", table, err)
 	}
 	return &defaultVisitModel{
 		conn:  conn,

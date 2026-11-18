@@ -35,6 +35,26 @@ go run test/test.go
 
 调试入口在 `test/test.go`，需要先在 `token/` 下放置登录凭证（`bili_token.txt` / `bili_token.json`）、`etc/` 下放置配置文件。配置模板见 [etc/bilidanmaku-api.example.yaml](etc/bilidanmaku-api.example.yaml)，复制为 `etc/bilidanmaku-api.yaml` 即可使用。
 
+## 三档进房欢迎（PR #33）
+
+在原有 `InteractWord` 欢迎之上新增三档分流，默认关闭，旧配置行为不变：
+
+```yaml
+InteractWord: true
+WelcomeTier: true          # 三档欢迎开关
+WelcomeFanMedalLevel: 0    # 老粉最低粉丝牌等级，0 不限
+WelcomeNew:                # 第一次来的观众
+  - "欢迎呀~{at}恭喜你发现了{anchor}"
+WelcomeBack:               # 来过但没戴本直播间粉丝牌
+  - "哈喽呀~{at}等你很久喽~"
+WelcomeFan:                # 戴着本直播间粉丝牌（老粉）
+  - "哈喽{at}今天有没有更想{anchor}呀~"
+```
+
+- 匹配顺序：PK 串门 → 指定 UID → 老粉 → 新人 → 回头客；某档模板为空时跳过该档，全部为空回退 `WelcomeDanmu` / `WelcomeDanmuByTime`
+- 占位符：`{at}`（@ 模式下自动省略）、`{user}`、`{anchor}`、`{medal}`、`{medal_level}`
+- 进场记录存于 SQLite `visit_<房间号>` 表（`uid` / `first_seen` / `last_seen` / `visit_cnt`），90 天未访问自动清理；V1/V2 双事件 10 秒短窗去重
+
 ## 依赖方（GUI）升级指引
 
 v1.1.21 之后的版本有两个包路径变更，GUI 仓库需同步调整 import：

@@ -5,9 +5,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"math/rand"
-	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/xbclub/BilibiliDanmuRobot-Core/blivedm-go/client"
@@ -61,7 +61,38 @@ func handleInteractEvent(svcCtx *svc.ServiceContext, uid int64, uname string, ms
 	}
 }
 
+// enterSeenWindow 进场事件短窗去重窗口，与欢迎发送层 10 秒去重保持一致
+const enterSeenWindow = 10 * time.Second
+
+var (
+	enterSeenMu sync.Mutex
+	enterSeen   = map[int64]time.Time{}
+)
+
+// dedupEnter V1/V2 双事件去重：B 站过渡期同一次进场可能同时下发
+// INTERACT_WORD 与 INTERACT_WORD_V2，短窗内同一 uid 只处理第一条，
+// 避免 visit 表重复计数、真·新人被并发事件误判为回头客（PR #33 评审 P1）
+func dedupEnter(uid int64) bool {
+	enterSeenMu.Lock()
+	defer enterSeenMu.Unlock()
+	now := time.Now()
+	if t, ok := enterSeen[uid]; ok && now.Sub(t) < enterSeenWindow {
+		return false
+	}
+	for k, v := range enterSeen {
+		if now.Sub(v) >= enterSeenWindow {
+			delete(enterSeen, k)
+		}
+	}
+	enterSeen[uid] = now
+	return true
+}
+
 func handleEnter(svcCtx *svc.ServiceContext, uid int64, uname string, medal *entity.FansMedalInfo) {
+	if !dedupEnter(uid) {
+		logx.Debugf("进场事件短窗去重: uid=%v uname=%v", uid, uname)
+		return
+	}
 	if !svcCtx.Config.InteractSelf && strconv.FormatInt(uid, 10) == svcCtx.RobotID {
 		return
 	}
@@ -155,12 +186,16 @@ func tierWelcome(svcCtx *svc.ServiceContext, uid int64, uname string, medal *ent
 		return "", false
 	}
 	first := false
-	if svcCtx.VisitModel != nil {
-		var err error
-		first, err = svcCtx.VisitModel.Touch(context.Background(), uid, time.Now().Unix())
-		if err != nil {
-			logx.Errorf("记录进场失败 uid=%v: %v", uid, err)
-		}
+	if svcCtx.VisitModel == nil {
+		logx.Infof("三档欢迎: uid=%v uname=%v VisitModel 未初始化，回退旧逻辑", uid, uname)
+		return "", false
+	}
+	var err error
+	first, err = svcCtx.VisitModel.Touch(context.Background(), uid, time.Now().Unix())
+	if err != nil {
+		// 记录失败时无法判断首访，回退旧逻辑，避免把真·新人误判成回头客
+		logx.Errorf("记录进场失败 uid=%v: %v，回退旧逻辑", uid, err)
+		return "", false
 	}
 	isFan := isFan(svcCtx, medal)
 
@@ -194,12 +229,20 @@ func isFan(svcCtx *svc.ServiceContext, medal *entity.FansMedalInfo) bool {
 	return medal.MedalLevel >= int64(svcCtx.Config.WelcomeFanMedalLevel)
 }
 
+// clipRunes 超长文本按 rune 截断加省略号，n 小于 1 时原样返回
+func clipRunes(s string, n int) string {
+	r := []rune(s)
+	if n > 0 && len(r) > n {
+		return string(r[:n-1]) + "…"
+	}
+	return s
+}
+
 func renderWelcome(tpl, uname string, medal *entity.FansMedalInfo, svcCtx *svc.ServiceContext) string {
-	name := uname
+	name := shortName(uname, 4, svcCtx.Config.DanmuLen)
 	if svcCtx.Config.WelcomeUseAt {
 		tpl = strings.ReplaceAll(tpl, "{at}", "")
 	} else {
-		name = shortName(uname, 4, svcCtx.Config.DanmuLen)
 		tpl = strings.ReplaceAll(tpl, "{at}", "@"+name+" ")
 	}
 	medalName, medalLevel := "", ""
@@ -207,11 +250,13 @@ func renderWelcome(tpl, uname string, medal *entity.FansMedalInfo, svcCtx *svc.S
 		medalName = medal.MedalName
 		medalLevel = strconv.FormatInt(medal.MedalLevel, 10)
 	}
+	// 主播名/粉丝牌名计入长度预算，避免模板超长被 SplitMessage 硬切在词中间
+	budget := svcCtx.Config.DanmuLen / 2
 	return strings.NewReplacer(
 		"{user}", name,
-		"{medal}", medalName,
+		"{medal}", clipRunes(medalName, budget),
 		"{medal_level}", medalLevel,
-		"{anchor}", svcCtx.AnchorName,
+		"{anchor}", clipRunes(svcCtx.AnchorName, budget),
 	).Replace(tpl)
 }
 
@@ -226,11 +271,12 @@ func inWide(target string, src []string) bool {
 	return false
 }
 
+// in 精确匹配黑名单；不改动共享配置切片，避免 V1/V2 并发派发下的排序竞争
 func in(target string, src []string) bool {
-	if src != nil {
-		sort.Strings(src)
-		index := sort.SearchStrings(src, target)
-		return index < len(src) && src[index] == target
+	for _, s := range src {
+		if s == target {
+			return true
+		}
 	}
 	return false
 }

@@ -1,4 +1,4 @@
-package logic
+package welcome
 
 import (
 	"testing"

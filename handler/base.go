@@ -83,32 +83,39 @@ func NewWsHandler() WsHandler {
 	return ws
 }
 func (ws *wsHandler) ReloadConfig() error {
-	ctx, err := mustloadConfig()
+	c, err := loadConfig()
 	if err != nil {
 		return err
 	}
 	oldconfig := *ws.svc.Config
+
+	if c.RoomId == oldconfig.RoomId {
+		// 仅配置热更：只替换 Config 指针，复用原有 DB 连接与 models，
+		// 避免每次 reload 重建 sqlite 连接与 AutoMigrate（PR #33 评审 P2）
+		ws.svc.Config = &c
+		ws.reloadCronIfNeeded(c, oldconfig)
+		return nil
+	}
+
+	logx.Infof("房间号更改，更换房间号 ：%v", c.RoomId)
+	// 先探测新房信息，失败则中止 reload，保持旧连接与旧上下文完全不变，
+	// 避免沿用旧房主播 UID 导致老粉档静默失效（PR #33 评审 P2）
+	roominfo, err := biliapi.RoomInit(c.RoomId)
+	if err != nil {
+		logx.Errorf("新房间信息获取失败，保持原房间 %v: %v", oldconfig.RoomId, err)
+		return err
+	}
+	anchorName := ws.svc.AnchorName
+	if userinfo, err := biliapi.Userinfo(c.RoomId); err == nil && userinfo != nil {
+		anchorName = userinfo.Data.Info.Uname
+	}
+
+	ctx := svc.NewServiceContext(c)
 	ctx.RobotID = ws.svc.RobotID
-	ctx.UserID = ws.svc.UserID
-	ctx.AnchorName = ws.svc.AnchorName
+	ctx.UserID = roominfo.Data.Uid
+	ctx.AnchorName = anchorName
 	ctx.Autointerract = ws.svc.Autointerract
 
-	roomChanged := ctx.Config.RoomId != oldconfig.RoomId
-	if roomChanged {
-		logx.Infof("房间号更改，更换房间号 ：%v", ctx.Config.RoomId)
-		ws.client.Stop()
-		ws.client = client.NewClient(ctx.Config.RoomId)
-		ws.client.SetCookie(biliapi.CookieStr)
-		roominfo, err := biliapi.RoomInit(ctx.Config.RoomId)
-		if err != nil {
-			logx.Error(err)
-		} else {
-			ctx.UserID = roominfo.Data.Uid
-		}
-		if userinfo, err := biliapi.Userinfo(ctx.Config.RoomId); err == nil && userinfo != nil {
-			ctx.AnchorName = userinfo.Data.Info.Uname
-		}
-	}
 	// 原地更新原有 ServiceContext：常驻 goroutine（弹幕推送/欢迎/礼物/PK 等）
 	// 在启动时捕获了 ws.svc 指针，整体替换会使它们继续读写旧实例，
 	// 导致配置热更新失效、PK 串门 uid 集合与新注册的 handler 断开（PR #33 评审 P0）
@@ -121,26 +128,29 @@ func (ws *wsHandler) ReloadConfig() error {
 	ws.svc.DanmuCntModel = ctx.DanmuCntModel
 	ws.svc.BlindBoxStatModel = ctx.BlindBoxStatModel
 	ws.svc.VisitModel = ctx.VisitModel
-	if roomChanged {
-		// 换房后清空旧房的 PK 串门 uid 集合；不替换 OtherSideUid 实例，
-		// 保证 pk goroutine 与新注册的 handler 始终读写同一集合
-		ws.svc.OtherSideUid.Clear()
-	}
+	// 换房后清空旧房的 PK 串门 uid 集合；不替换 OtherSideUid 实例，
+	// 保证 pk goroutine 与新注册的 handler 始终读写同一集合
+	ws.svc.OtherSideUid.Clear()
 
-	if roomChanged {
-		if err := ws.client.Start(); err != nil {
-			return err
-		}
-		ws.registerHandler()
+	ws.client.Stop()
+	ws.client = client.NewClient(c.RoomId)
+	ws.client.SetCookie(biliapi.CookieStr)
+	if err := ws.client.Start(); err != nil {
+		return err
 	}
-	if ctx.Config.CronDanmu != oldconfig.CronDanmu || !areSlicesEqual(ctx.Config.CronDanmuList, oldconfig.CronDanmuList) {
+	ws.registerHandler()
+	ws.reloadCronIfNeeded(c, oldconfig)
+	return nil
+}
+
+func (ws *wsHandler) reloadCronIfNeeded(newCfg, oldCfg config.Config) {
+	if newCfg.CronDanmu != oldCfg.CronDanmu || !areSlicesEqual(newCfg.CronDanmuList, oldCfg.CronDanmuList) {
 		logx.Info("识别到定时弹幕配置发生变化，重新加载")
 		for _, i := range ws.corndanmu.Entries() {
 			ws.corndanmu.Remove(i.ID)
 		}
 		ws.corndanmuStart()
 	}
-	return nil
 }
 
 type WsHandler interface {
@@ -312,7 +322,8 @@ func (w *wsHandler) corndanmuStart() {
 	}
 	w.corndanmu.Start()
 }
-func mustloadConfig() (*svc.ServiceContext, error) {
+// loadConfig 读取配置文件并完成日志与目录初始化，不建立数据库连接
+func loadConfig() (config.Config, error) {
 	dir := "./token"
 	if _, err := os.Stat(dir); os.IsNotExist(err) {
 		// Directory does not exist, create it
@@ -332,11 +343,18 @@ func mustloadConfig() (*svc.ServiceContext, error) {
 		err = os.MkdirAll(c.DBPath, 0777)
 		if err != nil {
 			logx.Errorf("文件夹创建失败：%s", c.DBPath)
-			return nil, err
+			return c, err
 		}
 	}
-	ctx := svc.NewServiceContext(c)
-	return ctx, err
+	return c, nil
+}
+
+func mustloadConfig() (*svc.ServiceContext, error) {
+	c, err := loadConfig()
+	if err != nil {
+		return nil, err
+	}
+	return svc.NewServiceContext(c), nil
 }
 
 // 比较两个 Person 切片是否相同
