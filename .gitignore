@@ -20,9 +20,11 @@
 
 # Go workspace file
 go.work
-etc
+etc/*
+!etc/bilidanmaku-api.example.yaml
 login.jpg
 token
 logs
 BilibiliDanmuRobot-Core
 .DS_Store
+.zcode/

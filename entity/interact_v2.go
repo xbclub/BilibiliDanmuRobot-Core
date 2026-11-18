@@ -141,6 +141,10 @@ func consumeBytesField(raw []byte, typ protowire.Type) ([]byte, int) {
 
 func decodeInteractBase64(s string) ([]byte, error) {
 	s = strings.TrimSpace(s)
+	if s == "" {
+		// 空白 payload 直接报错，避免下游收到 uid=0 的零值事件
+		return nil, fmt.Errorf("decode pb: empty payload")
+	}
 	s = strings.TrimRight(s, "=")
 	if raw, err := base64.RawStdEncoding.DecodeString(s); err == nil {
 		return raw, nil

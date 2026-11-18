@@ -1,0 +1,101 @@
+# BilibiliDanmuRobot-Core 示例配置
+# 使用方式：复制为 etc/bilidanmaku-api.yaml 后按需修改
+# 所有字段都有默认值，未列出的字段见 config/config.go；键名大小写不敏感
+# 支持环境变量覆盖（go-zero conf.UseEnv）
+
+# 日志配置（go-zero logx）
+log:
+  servicename: danmurobot-core
+  mode: file            # console | file
+  path: logs
+  level: info
+
+# ===================== 核心设置 =====================
+roomid: 4699397         # 直播间房间号
+# wsserverurl: wss://broadcastlv.chat.bilibili.com:2245/sub   # 弹幕服务器，一般不需要改
+
+# ===================== 常规设置 =====================
+danmulen: 20            # 单条弹幕最大长度（字符）
+entrymsg: "off"         # 启动后自动发送的文本，off 表示不发送
+pknotice: true          # PK 信息播报开关
+showblockmsg: false     # 禁言提醒开关
+# goodbyeinfo: "下播了，明天见~"    # 下播自动发送的话，不配置则不发送
+
+# ===================== 关键字回复 =====================
+keywordreply: false
+# keywordreplylist:
+#   "菜": "不许说主播菜!"
+
+# ===================== AI 聊天 =====================
+talkrobotcmd: "test"    # 触发机器人的关键字
+fuzzymatchcmd: false    # 模糊匹配关键字（否则只匹配前缀）
+robotname: "花花"
+robotmode: QingYunKe    # QingYunKe | ChatGPT
+# chatgpt:
+#   apiurl: https://api.openai.com/v1
+#   apitoken: sk-xxxx
+#   prompt: "你是一个非常幽默的机器人助理，可以使用emoji表情符号，可以使用颜文字"
+#   limit: true              # 在 prompt 中追加弹幕长度限制
+#   model: gpt-3.5-turbo
+
+# ===================== 欢迎配置 =====================
+interactword: false     # 进场欢迎开关
+welcomeuseat: false     # 使用@模式欢迎
+welcomedanmu:           # 欢迎语列表，{user} 会被替换为用户名
+  - "欢迎 {user} ~"
+interactwordbytime: false    # 按时间段欢迎
+# welcomedanmubytime:         # key: midnight/earlymorning/morning/latemorning/noon/afternoon/night
+#   - enabled: true
+#     key: noon
+#     random: false
+#     danmu:
+#       - "中午好 {user} ~"
+entryeffect: false              # 特效欢迎开关
+welcomehighwealthy: false       # 欢迎高财富等级用户
+welcomehighwealthylevel: 20     # 财富等级阈值
+thanksfocus: false              # 关注感谢
+thanksshare: false              # 分享感谢
+interactself: true              # 欢迎自己
+interactanchor: true            # 欢迎主播
+# focusdanmu:                    # 关注/分享感谢附加语
+#   - "感谢关注~"
+welcomeswitch: false            # 指定用户欢迎开关
+# welcomestring:                 # 指定用户欢迎语，key 为 uid
+#   "123456": "欢迎老板回家~"
+# welcomeblacklistwide: []       # 不欢迎黑名单（模糊匹配）
+# welcomeblacklist: []           # 不欢迎黑名单（精确匹配）
+
+# ===================== 答谢设置 =====================
+thanksgift: false        # 感谢送礼
+thanksgifttimeout: 3     # 礼物统计窗口（秒）
+thanksblindboxtimeout: 6 # 盲盒统计窗口（秒）
+thanksmincost: 0         # 最小感谢礼物价值
+blindboxprofitlossstat: true   # 盲盒盈亏统计
+thanksgiftuseat: false   # 使用@模式感谢
+
+# ===================== 定时弹幕 =====================
+crondanmu: false
+# crondanmulist:               # cron 为 6 段式（含秒）
+#   - cron: "0 */30 * * * *"
+#     random: true
+#     danmu:
+#       - "记得点关注~"
+#       - "求个电池~"
+
+# ===================== 抽签 =====================
+drawbylot: true
+# drawlotslist: []             # 抽签话术列表，默认值见 config/config.go
+
+# ===================== 签到 / 统计 =====================
+signinenable: true       # 签到
+danmucntenable: false    # 弹幕计数提醒（发满10条表扬 + 「查询弹幕」）
+blindboxstat: true       # 盲盒统计开关（只影响输出，不影响记录）
+dbpath: ./db
+dbname: sqliteDataBase.db
+
+# ===================== 杂项 =====================
+customizebullet: false   # 手动弹幕发送（命令行），GUI 无此选项
+
+# ===================== 抽奖 =====================
+lotteryenable: true
+# lotteryurl: ""
