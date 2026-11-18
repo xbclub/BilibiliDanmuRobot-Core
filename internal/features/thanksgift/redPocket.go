@@ -7,6 +7,7 @@ import (
 	"sync"
 
 	"github.com/xbclub/BilibiliDanmuRobot-Core/blivedm-go/client"
+	"github.com/xbclub/BilibiliDanmuRobot-Core/config"
 	"github.com/xbclub/BilibiliDanmuRobot-Core/entity"
 	"github.com/xbclub/BilibiliDanmuRobot-Core/logic"
 	"github.com/xbclub/BilibiliDanmuRobot-Core/svc"
@@ -15,6 +16,14 @@ import (
 
 var _redPocketCnt = 0
 var locked *sync.Mutex = new(sync.Mutex)
+
+// ResetRedPocketState 换房时重置红包计数：残留计数会让新房间
+// WINNER_LIST 的「计数归零才恢复欢迎」判定永远无法满足
+func ResetRedPocketState() {
+	locked.Lock()
+	_redPocketCnt = 0
+	locked.Unlock()
+}
 
 // registerRedPocket 红包感谢，红包期间临时关闭欢迎弹幕
 func registerRedPocket(c *client.Client, svcCtx *svc.ServiceContext) {
@@ -35,7 +44,10 @@ func registerRedPocket(c *client.Client, svcCtx *svc.ServiceContext) {
 		}
 		if svcCtx.Config.InteractWord || svcCtx.Config.EntryEffect || svcCtx.Config.WelcomeHighWealthy {
 			svcCtx.PauseWelcome()
-			svcCtx.Config.LotteryEnable = false
+			// 原地写 Config 字段属于无锁写，统一走变更器写时复制
+			svcCtx.MutateConfig(func(c *config.Config) {
+				c.LotteryEnable = false
+			})
 			logic.PushToBulletSender("识别到红包，欢迎弹幕已临时关闭")
 		}
 	})

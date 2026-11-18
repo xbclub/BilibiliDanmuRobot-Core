@@ -15,6 +15,8 @@ import (
 func Register(c *client.Client, svcCtx *svc.ServiceContext) {
 	// 禁言提醒
 	c.RegisterCustomEventHandler("ROOM_BLOCK_MSG", func(s string) {
+		svcCtx.EventRLock()
+		defer svcCtx.EventRUnlock()
 		if svcCtx.Config.ShowBlockMsg {
 			info := &entity.RoomBlockMsg{}
 			err := json.Unmarshal([]byte(s), info)

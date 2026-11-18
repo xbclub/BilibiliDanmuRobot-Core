@@ -47,7 +47,11 @@ END:
 func handleRobotBullet(content entity.Bullet, svcCtx *svc.ServiceContext) {
 	var err error
 	var reply string
-	if svcCtx.Config.RobotMode == "ChatGPT" {
+	// 快照模式：机器人请求是网络 IO，锁内只取模式配置
+	svcCtx.EventRLock()
+	mode := svcCtx.Config.RobotMode
+	svcCtx.EventRUnlock()
+	if mode == "ChatGPT" {
 		if reply, err = biliapi.RequestChatgptRobot(content.Msg, svcCtx); err != nil {
 			logx.Errorf("请求机器人失败：%v", err)
 			logic.PushToBulletSender("不好意思，机器人坏掉了...", content.Reply...)

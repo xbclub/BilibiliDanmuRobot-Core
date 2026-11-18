@@ -40,6 +40,22 @@ func (s *SafeUidSet) Clear() {
 	}
 }
 
+// EventRLock / EventRUnlock 事件处理入口的读锁：
+// 持有期间 reload 与运行时配置变更（写锁）不会插入，单个事件内
+// 读到的 Config/models 是一致的组合。约定：持锁期间不得调用任何
+// 配置变更器（SetWelcomeDefault/PauseWelcome/ResumeWelcome/MutateConfig），
+// 否则同 goroutine 死锁；变更器调用点须在锁外或独立 goroutine 中执行
+func (s *ServiceContext) EventRLock() { s.mu.RLock() }
+
+func (s *ServiceContext) EventRUnlock() { s.mu.RUnlock() }
+
+// WithEvent 在事件读锁内执行 fn，供事件入口一行包裹使用
+func (s *ServiceContext) WithEvent(fn func()) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	fn()
+}
+
 // MutateConfig 以写时复制方式修改配置：fn 收到当前配置的副本，
 // 修改后作为新快照整体替换，不在旧快照上原地写（读方持有的旧指针不受影响）
 func (s *ServiceContext) MutateConfig(fn func(*config.Config)) {
@@ -176,7 +192,7 @@ func NewServiceContext(c config.Config) *ServiceContext {
 	if err != nil {
 		panic(err)
 	}
-	return &ServiceContext{
+	s := &ServiceContext{
 		OtherSideUid:      NewSafeUidSet(),
 		SignInModel:       model.NewSignInModel(db, int64(c.RoomId)),
 		DanmuCntModel:     model.NewDanmuCntModel(db, int64(c.RoomId)),
@@ -186,6 +202,14 @@ func NewServiceContext(c config.Config) *ServiceContext {
 		Config:            &c,
 		UserID:            0,
 	}
+	// 恢复基准取配置文件的初始值：天选/红包结束后 ResumeWelcome 回到主播
+	// 配置的默认状态（临时关语义）。历史版本从未初始化该字段，导致恢复到
+	// 零值 false、欢迎在首次天选后静默失效，属于存量缺陷，此处一并修复；
+	// 主播用指令开关时 SetWelcomeDefault 会同步更新该基准
+	s.Autointerract.InteractWord = c.InteractWord
+	s.Autointerract.EntryEffect = c.EntryEffect
+	s.Autointerract.WelcomeHighWealthy = c.WelcomeHighWealthy
+	return s
 }
 
 // Close 释放持有的数据库连接；换房时对旧 context 调用，避免连接泄漏

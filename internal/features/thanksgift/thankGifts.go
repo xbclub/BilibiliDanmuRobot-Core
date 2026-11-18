@@ -16,6 +16,8 @@ import (
 // registerGifts 礼物感谢
 func registerGifts(c *client.Client, svcCtx *svc.ServiceContext) {
 	c.RegisterCustomEventHandler("SEND_GIFT", func(s string) {
+		svcCtx.EventRLock()
+		defer svcCtx.EventRUnlock()
 		send := &entity.SendGiftText{}
 		if err := json.Unmarshal([]byte(s), send); err != nil {
 			logx.Errorf("SEND_GIFT 解析失败: %v", err)
@@ -29,6 +31,8 @@ func registerGifts(c *client.Client, svcCtx *svc.ServiceContext) {
 		danmuproc.SaveBlindBoxStat(send, svcCtx)
 	})
 	c.RegisterCustomEventHandler("SEND_GIFT_V2", func(s string) {
+		svcCtx.EventRLock()
+		defer svcCtx.EventRUnlock()
 		var msg entity.SendGiftV2Text
 		if err := json.Unmarshal([]byte(s), &msg); err != nil {
 			logx.Errorf("SEND_GIFT_V2 解析失败: %v", err)
@@ -62,6 +66,8 @@ func registerGifts(c *client.Client, svcCtx *svc.ServiceContext) {
 		}
 	})
 	c.RegisterCustomEventHandler("GUARD_BUY", func(s string) {
+		svcCtx.EventRLock()
+		defer svcCtx.EventRUnlock()
 		if svcCtx.Config.ThanksGift {
 			send := &entity.GuardBuyText{}
 			_ = json.Unmarshal([]byte(s), send)
@@ -76,6 +82,8 @@ func registerGifts(c *client.Client, svcCtx *svc.ServiceContext) {
 	})
 
 	c.RegisterCustomEventHandler("COMMON_NOTICE_DANMAKU", func(s string) {
+		svcCtx.EventRLock()
+		defer svcCtx.EventRUnlock()
 		if svcCtx.Config.ThanksGift {
 			data := &entity.CommonNoticeDanmaku{}
 			_ = json.Unmarshal([]byte(s), data)

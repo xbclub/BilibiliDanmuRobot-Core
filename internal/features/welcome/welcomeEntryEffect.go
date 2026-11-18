@@ -16,6 +16,8 @@ import (
 // registerEntryEffect 进场特效欢迎
 func registerEntryEffect(c *client.Client, svcCtx *svc.ServiceContext) {
 	c.RegisterCustomEventHandler("ENTRY_EFFECT", func(s string) {
+		svcCtx.EventRLock()
+		defer svcCtx.EventRUnlock()
 		entry := &entity.EntryEffectText{}
 		_ = json.Unmarshal([]byte(s), entry)
 

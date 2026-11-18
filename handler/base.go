@@ -134,6 +134,8 @@ func (ws *wsHandler) ReloadConfig() error {
 	// 换房后清空旧房的 PK 串门 uid 集合；不替换 OtherSideUid 实例，
 	// 保证 pk goroutine 与新注册的 handler 始终读写同一集合
 	ws.svc.OtherSideUid.Clear()
+	// 重置红包计数：旧房残留计数会让新房间的红包恢复链路失效
+	thanksgift.ResetRedPocketState()
 
 	ws.client = newCli
 	ws.registerHandler()
@@ -206,8 +208,13 @@ func (w *wsHandler) StopChanel() {
 	}
 }
 func (w *wsHandler) SayGoodbye() {
-	if len(w.svc.Config.GoodbyeInfo) > 0 {
-		for _, msgs := range logic.SplitMessage(w.svc.Config.GoodbyeInfo, w.svc.Config.DanmuLen) {
+	// 快照模式：发送是网络 IO，锁内只取配置值
+	w.svc.EventRLock()
+	goodbye := w.svc.Config.GoodbyeInfo
+	danmuLen := w.svc.Config.DanmuLen
+	w.svc.EventRUnlock()
+	if len(goodbye) > 0 {
+		for _, msgs := range logic.SplitMessage(goodbye, danmuLen) {
 			err := biliapi.Send(msgs, w.svc)
 			if err != nil {
 				logx.Errorf("下播弹幕发送失败：%s msg: %s", err, msgs)

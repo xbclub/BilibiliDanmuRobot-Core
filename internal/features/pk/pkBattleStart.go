@@ -11,9 +11,13 @@ import (
 
 func registerBattleStart(c *client.Client, svcCtx *svc.ServiceContext) {
 	c.RegisterCustomEventHandler("PK_BATTLE_START_NEW", func(s string) {
+		svcCtx.EventRLock()
+		defer svcCtx.EventRUnlock()
 		pkbattlestartfunc(svcCtx, s)
 	})
 	c.RegisterCustomEventHandler("PK_BATTLE_START", func(s string) {
+		svcCtx.EventRLock()
+		defer svcCtx.EventRUnlock()
 		pkbattlestartfunc(svcCtx, s)
 	})
 }

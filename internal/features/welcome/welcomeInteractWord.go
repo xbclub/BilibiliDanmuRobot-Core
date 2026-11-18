@@ -24,7 +24,9 @@ func registerInteractWord(c *client.Client, svcCtx *svc.ServiceContext) {
 			logx.Errorf("INTERACT_WORD 解析失败: %v", err)
 			return
 		}
+		svcCtx.EventRLock()
 		handleInteractEvent(svcCtx, interact.Data.Uid, interact.Data.Uname, interact.Data.MsgType, interact.Data.FansMedal)
+		svcCtx.EventRUnlock()
 	})
 	c.RegisterCustomEventHandler("INTERACT_WORD_V2", func(s string) {
 		var interact entity.InteractWordV2Text
@@ -40,7 +42,9 @@ func registerInteractWord(c *client.Client, svcCtx *svc.ServiceContext) {
 			logx.Errorf("INTERACT_WORD_V2 pb 解析失败: %v", err)
 			return
 		}
+		svcCtx.EventRLock()
 		handleInteractEvent(svcCtx, ev.UID, ev.Uname, ev.MsgType, ev.FansMedal)
+		svcCtx.EventRUnlock()
 	})
 }
 

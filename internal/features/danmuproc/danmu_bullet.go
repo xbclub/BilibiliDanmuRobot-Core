@@ -72,6 +72,9 @@ func Run(ctx context.Context, svcCtx *svc.ServiceContext) {
 					card = cardInfo[1].(string)
 				}
 			}
+			// 事件读锁内做功能开关判定与分发（spawn-only，不持锁做 IO）；
+			// DoCMDProcess 在独立 goroutine 中取写锁，无自升级死锁
+			svcCtx.EventRLock()
 			if len(danmumsg) > 0 && uid != svcCtx.RobotID {
 				// 机器人相关
 				go robot.DoDanmuProcess(danmumsg, svcCtx, reply)
@@ -100,6 +103,7 @@ func Run(ctx context.Context, svcCtx *svc.ServiceContext) {
 				// 主播指令控制
 				go DoCMDProcess(danmumsg, uid, svcCtx)
 			}
+			svcCtx.EventRUnlock()
 			// 实时输出弹幕消息
 			if tagExtra.ReplyMid > 0 {
 				danmumsg = fmt.Sprintf("@%s %s", tagExtra.ReplyUname, danmumsg)

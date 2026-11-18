@@ -33,7 +33,10 @@ func StartSendBullet(ctx context.Context, svcCtx *svc.ServiceContext) {
 		case <-ctx.Done():
 			goto END
 		case bullet := <-sender.bulletChan:
-			for _, msgs := range SplitMessage(bullet.Msg, svcCtx.Config.DanmuLen) {
+			svcCtx.EventRLock()
+			danmuLen := svcCtx.Config.DanmuLen
+			svcCtx.EventRUnlock()
+			for _, msgs := range SplitMessage(bullet.Msg, danmuLen) {
 				if err := biliapi.Send(msgs, svcCtx, bullet.Reply...); err != nil {
 					logx.Errorf("弹幕发送失败：%s msg: %s", err, msgs)
 				} else {

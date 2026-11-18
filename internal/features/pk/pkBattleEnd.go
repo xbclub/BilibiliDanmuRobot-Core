@@ -7,15 +7,23 @@ import (
 
 func registerBattleEnd(c *client.Client, svcCtx *svc.ServiceContext) {
 	c.RegisterCustomEventHandler("PK_BATTLE_END", func(s string) {
+		svcCtx.EventRLock()
+		defer svcCtx.EventRUnlock()
 		cleanOtherSide(svcCtx)
 	})
 	c.RegisterCustomEventHandler("PK_END", func(s string) {
+		svcCtx.EventRLock()
+		defer svcCtx.EventRUnlock()
 		cleanOtherSide(svcCtx)
 	})
 	c.RegisterCustomEventHandler("PK_BATTLE_CRIT", func(s string) {
+		svcCtx.EventRLock()
+		defer svcCtx.EventRUnlock()
 		cleanOtherSide(svcCtx)
 	})
 	c.RegisterCustomEventHandler("PK_BATTLE_SETTLE_NEW", func(s string) {
+		svcCtx.EventRLock()
+		defer svcCtx.EventRUnlock()
 		cleanOtherSide(svcCtx)
 	})
 }

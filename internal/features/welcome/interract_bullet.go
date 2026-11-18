@@ -70,6 +70,10 @@ func Run(ctx context.Context, svcCtx *svc.ServiceContext) {
 
 			t.Reset(w)
 		case g = <-interractGiver.interractChan:
+			// 快照模式：发送含网络阻塞，锁内只取配置值，锁外执行动作
+			svcCtx.EventRLock()
+			useAt := svcCtx.Config.WelcomeUseAt
+			svcCtx.EventRUnlock()
 			interractGiver.locked.Lock()
 			if value, ok := interractGiver.interractFilter[g.Uid]; ok && value.Add(w).Unix() >= time.Now().Unix() {
 				logx.Infof("用户 %v 10秒内重复欢迎已被过滤", g.Uid)
@@ -80,7 +84,7 @@ func Run(ctx context.Context, svcCtx *svc.ServiceContext) {
 				}
 				parts := strings.Split(g.Msg, "\n")
 				for _, s := range parts {
-					if svcCtx.Config.WelcomeUseAt {
+					if useAt {
 						g.Reply = &entity.DanmuMsgTextReplyInfo{
 							ReplyUid: strconv.FormatInt(g.Uid, 10),
 						}
