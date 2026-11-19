@@ -53,17 +53,20 @@ func Logout() error {
 	}
 
 	// 注销请求期间若发生了新的扫码登录（bili_jct 变化），放弃清空与删文件
-	// ——新会话优先，避免把刚登录的状态误清掉（TOCTOU 收口）
-	if serverCalled && CookieValue("bili_jct") != csrf {
+	// ——新会话优先；比对与清空在同一写锁块内原子完成，彻底收口 TOCTOU
+	skipClear := false
+	cookieMu.Lock()
+	if serverCalled && CookieList["bili_jct"] != csrf {
+		skipClear = true
+	} else {
+		CookieList = make(map[string]string)
+		CookieStr = ""
+	}
+	cookieMu.Unlock()
+	if skipClear {
 		logx.Info("检测到注销期间发生新的登录，跳过本地清理")
 		return nil
 	}
-
-	// 清空进程内会话状态（写锁内完成，与发送/查询 goroutine 互斥）
-	cookieMu.Lock()
-	CookieList = make(map[string]string)
-	CookieStr = ""
-	cookieMu.Unlock()
 
 	// 删除本地凭证文件（不存在视为成功，幂等）
 	var delErrs []string

@@ -91,20 +91,22 @@ func GetLoginInfo(oauthKey string) (*entity.LoginInfoData, error) {
 	snapshotList, _ := json.Marshal(CookieList)
 	cookieMu.RUnlock()
 	// 落盘失败仅记日志（登录本身已成功），不再对 nil file 调 WriteString
-	file, err = os.OpenFile("token/bili_token.txt", os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0666)
-	if err != nil {
+	if file, err = os.OpenFile("token/bili_token.txt", os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0666); err != nil {
 		logx.Errorf("打开文件错误：%v", err)
 	} else {
-		file.WriteString(snapshotStr)
+		if _, werr := file.WriteString(snapshotStr); werr != nil {
+			logx.Errorf("写入 bili_token.txt 失败：%v", werr)
+		}
 		file.Close()
 	}
 	//使用追加模式打开文件
-	file, err = os.OpenFile("token/bili_token.json", os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0666)
-	if err != nil {
+	if file, err = os.OpenFile("token/bili_token.json", os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0666); err != nil {
 		logx.Errorf("打开文件错误：%v", err)
 		return data, nil
 	}
-	file.WriteString(string(snapshotList))
+	if _, werr := file.WriteString(string(snapshotList)); werr != nil {
+		logx.Errorf("写入 bili_token.json 失败：%v", werr)
+	}
 	file.Close()
 	return data, nil
 }
