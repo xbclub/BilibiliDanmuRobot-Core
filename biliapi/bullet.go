@@ -44,10 +44,10 @@ func Send(msg string, svcCtx *svc.ServiceContext, reply ...*entity.DanmuMsgTextR
 		}
 	}
 	m["roomid"] = strconv.Itoa(svcCtx.Config.RoomId)
-	m["csrf"] = CookieList["bili_jct"]
-	m["csrf_token"] = CookieList["bili_jct"]
+	m["csrf"] = CookieValue("bili_jct")
+	m["csrf_token"] = CookieValue("bili_jct")
 	err = retry.Do(func() error {
-		_, data, err := postWithFormData(http.MethodPost, url, CookieStr, &m)
+		_, data, err := postWithFormData(http.MethodPost, url, CookieHeader(), &m)
 		if err != nil {
 			logx.Errorf("请求send失败：%v", err)
 			return err

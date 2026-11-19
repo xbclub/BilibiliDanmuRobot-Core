@@ -8,9 +8,12 @@ import (
 // TestLogout 离网验证退出登录：本地凭证清理 + 进程内状态清空 + 幂等
 // （不种 bili_jct，跳过服务端注销分支，避免测试触网）
 func TestLogout(t *testing.T) {
-	// 模拟登录态
-	CookieList["SESSDATA"] = "fake-sessdata"
-	CookieStr = "SESSDATA=fake-sessdata"
+	// 模拟登录态（走 AddCookie 保证与写锁一致；shuffle 下先清残留避免真实触网）
+	cookieMu.Lock()
+	CookieList = make(map[string]string)
+	CookieStr = ""
+	cookieMu.Unlock()
+	AddCookie("SESSDATA", "fake-sessdata")
 	if LoggedIn() {
 		t.Fatal("缺少 bili_jct 时 LoggedIn 应为 false")
 	}
@@ -29,8 +32,8 @@ func TestLogout(t *testing.T) {
 		t.Fatalf("Logout 应成功: %v", err)
 	}
 
-	if CookieStr != "" || len(CookieList) != 0 {
-		t.Fatalf("会话状态未清空: CookieStr=%q CookieList=%v", CookieStr, CookieList)
+	if CookieHeader() != "" || CookieValue("SESSDATA") != "" {
+		t.Fatalf("会话状态未清空: CookieStr=%q", CookieHeader())
 	}
 	for _, p := range []string{"token/bili_token.txt", "token/bili_token.json"} {
 		if _, err := os.Stat(p); !os.IsNotExist(err) {
@@ -48,12 +51,14 @@ func TestLoggedIn(t *testing.T) {
 	if LoggedIn() {
 		t.Fatal("空状态不应视为已登录")
 	}
-	CookieList["bili_jct"] = "jct"
-	CookieList["SESSDATA"] = "sess"
+	AddCookie("bili_jct", "jct")
+	AddCookie("SESSDATA", "sess")
 	if !LoggedIn() {
 		t.Fatal("bili_jct+SESSDATA 齐备应视为已登录")
 	}
 	// 还原，避免污染其他测试
+	cookieMu.Lock()
 	CookieList = make(map[string]string)
 	CookieStr = ""
+	cookieMu.Unlock()
 }

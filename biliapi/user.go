@@ -85,20 +85,23 @@ func GetLoginInfo(oauthKey string) (*entity.LoginInfoData, error) {
 			AddCookie(kv[0], kv[1])
 		}
 	}
-	//使用追加模式打开文件
+	//使用追加模式打开文件（持读锁快照，避免与 Logout 等写方竞争）
+	cookieMu.RLock()
+	snapshotStr := CookieStr
+	snapshotList, _ := json.Marshal(CookieList)
+	cookieMu.RUnlock()
 	file, err = os.OpenFile("token/bili_token.txt", os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0666)
 	if err != nil {
 		logx.Errorf("打开文件错误：%v", err)
 	}
-	file.WriteString(CookieStr)
+	file.WriteString(snapshotStr)
 	file.Close()
 	//使用追加模式打开文件
 	file, err = os.OpenFile("token/bili_token.json", os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0666)
 	if err != nil {
 		logx.Errorf("打开文件错误：%v", err)
 	}
-	tokenstr, _ := json.Marshal(CookieList)
-	file.WriteString(string(tokenstr))
+	file.WriteString(string(snapshotList))
 	file.Close()
 	return data, err
 }
@@ -120,20 +123,24 @@ func SetHistoryCookie() error {
 		logx.Errorf("打开文件错误：%v", err)
 		return err
 	}
+	// 解析与重建在写锁内完成，避免与发送/查询 goroutine 竞争
+	cookieMu.Lock()
 	CookieStr = string(cookie)
 	cookie, err = os.ReadFile("token/bili_token.json")
 	if err != nil {
+		cookieMu.Unlock()
 		logx.Errorf("打开文件错误：%v", err)
 		return err
 	}
 	err = json.Unmarshal(cookie, &CookieList)
 	if err != nil {
-
+		cookieMu.Unlock()
 		return err
 	}
 	// txt 与 json 理论上同源；合并 txt 独有的字段后以浏览器格式（"k=v; k=v"）重建 CookieStr
 	mergeCookieStrIntoList(CookieStr)
 	rebuildCookieStr()
+	cookieMu.Unlock()
 	// 补齐 buvid3/buvid4 设备指纹，降低后续请求被风控(412)的概率
 	ensureBuvid()
 	return err

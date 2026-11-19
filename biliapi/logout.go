@@ -1,9 +1,11 @@
 package biliapi
 
 import (
+	"context"
 	"errors"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/xbclub/BilibiliDanmuRobot-Core/webprofile"
 	"github.com/zeromicro/go-zero/core/logx"
@@ -16,8 +18,9 @@ type logoutResp struct {
 }
 
 // Logout 退出登录（独立方法，不作为配置项）：
-//  1. best-effort 调 B 站注销接口，让 cookie 在服务端失效（失败不阻塞本地清理）
-//  2. 清空进程内会话状态（CookieStr / CookieList）
+//  1. best-effort 调 B 站注销接口，让 cookie 在服务端失效（失败不阻塞本地清理，
+//     5s 超时防止黑洞网络挂住 GUI 调用）
+//  2. 清空进程内会话状态（CookieStr / CookieList，写锁内完成）
 //  3. 删除登录凭证文件 token/bili_token.txt 与 token/bili_token.json
 //
 // 本地清理失败（文件删除出错）才返回 error；未登录状态下调用是安全的（幂等）。
@@ -25,11 +28,16 @@ type logoutResp struct {
 // StopWsClient 停掉 handler 再重新走扫码登录流程。
 func Logout() error {
 	// 服务端注销：POST passport.bilibili.com/login/exit/v2，需要 bili_jct
-	if csrf, ok := CookieList["bili_jct"]; ok && csrf != "" && CookieStr != "" {
+	csrf := CookieValue("bili_jct")
+	cookieHeader := CookieHeader()
+	if csrf != "" && cookieHeader != "" {
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
 		var resp logoutResp
 		_, err := cli.R().
+			SetContext(ctx).
 			SetHeaders(webprofile.MainHeaders()).
-			SetHeader("Cookie", CookieStr).
+			SetHeader("Cookie", cookieHeader).
 			SetFormData(map[string]string{"bili_jct": csrf}).
 			SetResult(&resp).
 			Post("https://passport.bilibili.com/login/exit/v2")
@@ -42,9 +50,11 @@ func Logout() error {
 		}
 	}
 
-	// 清空进程内会话状态
+	// 清空进程内会话状态（写锁内完成，与发送/查询 goroutine 互斥）
+	cookieMu.Lock()
 	CookieList = make(map[string]string)
 	CookieStr = ""
+	cookieMu.Unlock()
 
 	// 删除本地凭证文件（不存在视为成功，幂等）
 	var delErrs []string
@@ -62,5 +72,5 @@ func Logout() error {
 
 // LoggedIn 返回当前进程是否持有登录态（依据 bili_jct/SESSDATA 是否齐备）
 func LoggedIn() bool {
-	return CookieList["bili_jct"] != "" && CookieList["SESSDATA"] != ""
+	return CookieValue("bili_jct") != "" && CookieValue("SESSDATA") != ""
 }

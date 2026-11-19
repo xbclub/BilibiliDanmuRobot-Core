@@ -55,7 +55,7 @@ func NewWsHandler() WsHandler {
 		return nil
 	}
 	ws.client = client.NewClient(ctx.Config.RoomId)
-	ws.client.SetCookie(biliapi.CookieStr)
+	ws.client.SetCookie(biliapi.CookieHeader())
 	ws.svc = ctx
 	//初始化定时弹幕
 	ws.corndanmu = cron.New(cron.WithParser(cron.NewParser(
@@ -64,8 +64,8 @@ func NewWsHandler() WsHandler {
 	ws.mapCronDanmuSendIdx = make(map[int]int)
 
 	// 设置uid作为基本配置
-	strUserId, ok := biliapi.CookieList["DedeUserID"]
-	if !ok {
+	strUserId := biliapi.CookieValue("DedeUserID")
+	if strUserId == "" {
 		logx.Infof("uid加载失败，请重新登录")
 		return nil
 	}
@@ -120,7 +120,7 @@ func (ws *wsHandler) ReloadConfig() error {
 
 	// 再把新连接完全立起来，任何一步失败都直接返回，旧连接与旧上下文零改动
 	newCli := client.NewClient(c.RoomId)
-	newCli.SetCookie(biliapi.CookieStr)
+	newCli.SetCookie(biliapi.CookieHeader())
 	if err := newCli.Start(); err != nil {
 		logx.Errorf("新房间连接失败，保持原房间 %v: %v", oldconfig.RoomId, err)
 		return err
@@ -186,7 +186,7 @@ func (w *wsHandler) StartWsClient() error {
 	}
 	w.corndanmu.Start()
 	w.client = client.NewClient(w.svc.Config.RoomId)
-	w.client.SetCookie(biliapi.CookieStr)
+	w.client.SetCookie(biliapi.CookieHeader())
 	w.registerHandler()
 	return w.client.Start()
 }

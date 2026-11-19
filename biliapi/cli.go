@@ -2,6 +2,7 @@ package biliapi
 
 import (
 	"strings"
+	"sync"
 
 	"github.com/go-resty/resty/v2"
 	"github.com/xbclub/BilibiliDanmuRobot-Core/browserclient"
@@ -13,6 +14,11 @@ var (
 	UserAgent = webprofile.UserAgent
 	userAgent = UserAgent
 )
+
+// cookieMu 保护 CookieStr / CookieList：发送 goroutine、GUI 查询、
+// Logout/AddCookie 写方并发访问（包外请走 CookieHeader/CookieValue 访问器，
+// 包内直接访问全局变量的位置也必须持锁）
+var cookieMu sync.RWMutex
 
 // 调用GetLoginInfo后，对全局变量cookie赋值
 var CookieStr string
@@ -26,11 +32,27 @@ func InitHttpClient() {
 	cli = resty.New().SetTransport(browserclient.Transport())
 }
 
+// CookieHeader 线程安全地读取当前 cookie 头字符串
+func CookieHeader() string {
+	cookieMu.RLock()
+	defer cookieMu.RUnlock()
+	return CookieStr
+}
+
+// CookieValue 线程安全地读取指定 cookie 字段（不存在返回空串）
+func CookieValue(key string) string {
+	cookieMu.RLock()
+	defer cookieMu.RUnlock()
+	return CookieList[key]
+}
+
 // AddCookie 写入/覆盖一个 cookie 字段，并以浏览器格式（"k=v; k=v"，无尾分号）重建 CookieStr
 func AddCookie(key, value string) {
 	if value == "" {
 		return
 	}
+	cookieMu.Lock()
+	defer cookieMu.Unlock()
 	CookieList[key] = value
 	rebuildCookieStr()
 }
