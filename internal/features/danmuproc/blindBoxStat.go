@@ -74,7 +74,7 @@ func DoBlindBoxStat(msg, uid, username string, svcCtx *svc.ServiceContext, reply
 		} else {
 			ret, err = svcCtx.BlindBoxStatModel.GetTotalOnePersion(context.Background(), id, int16(date.Year()), int16(date.Month()), int16(date.Day()))
 		}
-		pushBlindBoxResult(label, ret, err, blindBoxDayPrefix(uid, username, svcCtx), reply...)
+		pushBlindBoxResult(label, ret, err, blindBoxDayPrefix(uid, username, svcCtx, len(reply) > 0), reply...)
 		return
 	}
 
@@ -100,17 +100,23 @@ func DoBlindBoxStat(msg, uid, username string, svcCtx *svc.ServiceContext, reply
 	} else {
 		ret, err = svcCtx.BlindBoxStatModel.GetTotalOnePersion(context.Background(), id, int16(now.Year()), int16(month), 0)
 	}
-	pushBlindBoxResult(fmt.Sprintf("%d年%d月", now.Year(), month), ret, err, blindBoxDayPrefix(uid, username, svcCtx), reply...)
+	pushBlindBoxResult(fmt.Sprintf("%d年%d月", now.Year(), month), ret, err, blindBoxDayPrefix(uid, username, svcCtx, len(reply) > 0), reply...)
 }
 
-func blindBoxDayPrefix(uid, username string, svcCtx *svc.ServiceContext) string {
-	// 主播查自己走的是全房间统计，加 @主播名 会把全房盈亏归于个人名下，
-	// 误导；主播自查不带前缀
+// blindBoxDayPrefix 查询结果称呼前缀：
+//   - 主播自查：走全房间统计，加称呼会把全房盈亏归于个人名下，不带前缀
+//   - 熟人昵称：昵称是称呼不是 @，与 reply 并存不重复
+//   - 普通观众：@ 由 reply_mid（真 @）承担；仅在无 reply 的调用方才落
+//     文本 @，否则客户端会渲染出两个 @（reply 的真 @ + 文本里的纯文本 @）
+func blindBoxDayPrefix(uid, username string, svcCtx *svc.ServiceContext, hasReply bool) string {
 	if uid == strconv.FormatInt(svcCtx.UserID, 10) {
 		return ""
 	}
 	if alias := svcCtx.Config.UserNicknames[uid]; alias != "" {
 		return alias + " "
+	}
+	if hasReply {
+		return ""
 	}
 	return "@" + username + " "
 }
