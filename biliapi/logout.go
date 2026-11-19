@@ -86,3 +86,20 @@ func Logout() error {
 func LoggedIn() bool {
 	return CookieValue("bili_jct") != "" && CookieValue("SESSDATA") != ""
 }
+
+// LogoutLocal 仅执行 Logout 的本地清理部分：清空进程内会话状态（写锁内）
+// 并删除凭证文件 token/bili_token.{txt,json}，不发起任何网络请求。
+// 适用于「登录态已被服务端判定失效」的场景——会话已死，调注销接口注定失败，
+// 直接本地收尾即可。幂等，未登录状态下调用安全；清理失败只记日志不返回错误。
+func LogoutLocal() {
+	cookieMu.Lock()
+	CookieList = make(map[string]string)
+	CookieStr = ""
+	cookieMu.Unlock()
+	for _, path := range []string{"token/bili_token.txt", "token/bili_token.json"} {
+		if err := os.Remove(path); err != nil && !errors.Is(err, os.ErrNotExist) {
+			logx.Errorf("删除凭证文件失败 %s: %v", path, err)
+		}
+	}
+	logx.Info("本地登录态已清空（未调用服务端注销接口）")
+}
