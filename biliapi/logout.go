@@ -87,6 +87,24 @@ func LoggedIn() bool {
 	return CookieValue("bili_jct") != "" && CookieValue("SESSDATA") != ""
 }
 
+// LoginVerified 服务端核实登录态，区分三态：
+//   - ok=true：登录有效
+//   - ok=false, err=nil：明确未登录/已过期（本地无 cookie，或 nav 接口明确返回未登录）
+//   - ok=false, err!=nil：无法确认（网络/风控原因 nav 请求失败）
+//
+// 调用方应仅在 err==nil 且 ok==false 时执行注销类动作（清 cookie/删凭证），
+// 网络失败不应误清登录态——GetUserInfo 因不区分这两种情况，不适合做此判定
+func LoginVerified() (ok bool, err error) {
+	if !LoggedIn() {
+		return false, nil
+	}
+	r, reachable := fetchNav()
+	if !reachable {
+		return false, errors.New("nav 接口请求失败，无法确认登录态")
+	}
+	return r.Data.IsLogin, nil
+}
+
 // LogoutLocal 仅执行 Logout 的本地清理部分：清空进程内会话状态（写锁内）
 // 并删除凭证文件 token/bili_token.{txt,json}，不发起任何网络请求。
 // 适用于「登录态已被服务端判定失效」的场景——会话已死，调注销接口注定失败，
