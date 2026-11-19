@@ -29,8 +29,9 @@ type CommonNoticeDanmaku struct {
 }
 
 type SendGiftText struct {
-	Cmd  string `json:"cmd"`
-	Data struct {
+	Cmd        string `json:"cmd"`
+	SkipThanks bool   `json:"-"`
+	Data       struct {
 		Action         string `json:"action"`
 		BatchComboID   string `json:"batch_combo_id"`
 		BatchComboSend struct {
