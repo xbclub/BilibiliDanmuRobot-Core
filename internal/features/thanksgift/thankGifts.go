@@ -27,7 +27,9 @@ func registerGifts(c *client.Client, svcCtx *svc.ServiceContext) {
 		if svcCtx.Config.ThanksGift {
 			logx.Infof("收到礼物 uname=%s gift=%s num=%d price=%d total=%d",
 				send.Data.Uname, send.Data.GiftName, send.Data.Num, send.Data.Price, send.Data.TotalCoin)
-			if send.Data.BlindGift.OriginalGiftName != "" {
+			// 盲盒盈亏统计开启（默认）走旧聚合感谢；关闭时才用即时话术并
+			// 跳过聚合，避免默认配置的聚合播报被静默替换（评审 P1-2）
+			if send.Data.BlindGift.OriginalGiftName != "" && !svcCtx.Config.BlindBoxProfitLossStat {
 				pushBlindGiftThanks(svcCtx, send)
 				send.SkipThanks = true
 			}
@@ -107,7 +109,9 @@ func onSendGiftV2Raw(svcCtx *svc.ServiceContext, s string) {
 		if svcCtx.Config.ThanksGift {
 			logx.Infof("收到礼物(V2) uname=%s gift=%s num=%d price=%d total=%d",
 				send.Data.Uname, send.Data.GiftName, send.Data.Num, send.Data.Price, send.Data.TotalCoin)
-			if send.Data.BlindGift.OriginalGiftName != "" {
+			// 盲盒盈亏统计开启（默认）走旧聚合感谢；关闭时才用即时话术并
+			// 跳过聚合，避免默认配置的聚合播报被静默替换（评审 P1-2）
+			if send.Data.BlindGift.OriginalGiftName != "" && !svcCtx.Config.BlindBoxProfitLossStat {
 				pushBlindGiftThanks(svcCtx, send)
 				send.SkipThanks = true
 			}

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"math/rand"
 	"regexp"
 	"strconv"
 
@@ -103,6 +104,11 @@ func DoBlindBoxStat(msg, uid, username string, svcCtx *svc.ServiceContext, reply
 }
 
 func blindBoxDayPrefix(uid, username string, svcCtx *svc.ServiceContext) string {
+	// 主播查自己走的是全房间统计，加 @主播名 会把全房盈亏归于个人名下，
+	// 误导；主播自查不带前缀
+	if uid == strconv.FormatInt(svcCtx.UserID, 10) {
+		return ""
+	}
 	if alias := svcCtx.Config.UserNicknames[uid]; alias != "" {
 		return alias + " "
 	}
@@ -122,9 +128,16 @@ func pushBlindBoxResult(label string, ret *model.Result, err error, prefix strin
 		ret = &model.Result{}
 	}
 	cost := float64(ret.Cost) / 1000.0
-	if ret.R >= 0 {
-		logic.PushToBulletSender(fmt.Sprintf("%s%s净赚%.2f元，开%d盒，花费%.2f元", prefix, label, float64(ret.R)/1000.0, ret.C, cost), reply...)
-	} else {
-		logic.PushToBulletSender(fmt.Sprintf("%s%s净亏%.2f元，开%d盒，花费%.2f元", prefix, label, math.Abs(float64(ret.R)/1000.0), ret.C, cost), reply...)
+	// 随机后缀防判重：短时间重复查询同句会被 B 站按重复弹幕拒绝（"f"）
+	suffix := []string{"~", "呀", "哦", ""}[rand.Intn(4)]
+	var msg string
+	switch {
+	case ret.R > 0:
+		msg = fmt.Sprintf("%s%s净赚%.2f元，开%d盒，花费%.2f元", prefix, label, float64(ret.R)/1000.0, ret.C, cost)
+	case ret.R < 0:
+		msg = fmt.Sprintf("%s%s净亏%.2f元，开%d盒，花费%.2f元", prefix, label, math.Abs(float64(ret.R)/1000.0), ret.C, cost)
+	default:
+		msg = fmt.Sprintf("%s%s没赚没亏，开%d盒，花费%.2f元", prefix, label, ret.C, cost)
 	}
+	logic.PushToBulletSender(msg+suffix, reply...)
 }
