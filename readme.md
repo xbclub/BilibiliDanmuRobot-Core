@@ -35,6 +35,16 @@ go run test/test.go
 
 调试入口在 `test/test.go`，需要先在 `token/` 下放置登录凭证（`bili_token.txt` / `bili_token.json`）、`etc/` 下放置配置文件。配置模板见 [etc/bilidanmaku-api.example.yaml](etc/bilidanmaku-api.example.yaml)，复制为 `etc/bilidanmaku-api.yaml` 即可使用。
 
+### dry-run 模式（GUI 调试）
+
+弹幕发送出口提供进程内 dry-run 开关（**不暴露为配置项**，配置文件不会出现）：`NewWsHandler` 之前调用一次
+
+```go
+biliapi.EnableDryRun()   // 或 DisableDryRun() 关闭；DryRunEnabled() 查询
+```
+
+开启后所有弹幕（欢迎/感谢/机器人/指令/下播告别）不请求 B 站，只打 `[dry-run]` 前缀日志，`Send` 按成功返回，发送队列按正常 3.5s 节奏排空，可完整模拟运行时序。
+
 ## 三档进房欢迎（PR #33）
 
 在原有 `InteractWord` 欢迎之上新增三档分流，默认关闭，旧配置行为不变：

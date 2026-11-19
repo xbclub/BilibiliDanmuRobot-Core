@@ -18,6 +18,12 @@ import (
 )
 
 func Send(msg string, svcCtx *svc.ServiceContext, reply ...*entity.DanmuMsgTextReplyInfo) error {
+	// dry-run：GUI 调试模式，不请求 B 站，只记日志并按成功返回，
+	// 让发送队列按正常节奏继续排空（EnableDryRun 开启，见 dryrun.go）
+	if dryRun.Load() {
+		logDryRunSend(msg, reply...)
+		return nil
+	}
 	var err error
 	var url = "https://api.live.bilibili.com/msg/send"
 	var respdata *entity.DanmuResp = new(entity.DanmuResp)
