@@ -45,6 +45,14 @@ biliapi.EnableDryRun()   // 或 DisableDryRun() 关闭；DryRunEnabled() 查询
 
 开启后所有弹幕（欢迎/感谢/机器人/指令/下播告别）不请求 B 站，只打 `[dry-run]` 前缀日志，`Send` 按成功返回，发送队列按正常 3.5s 节奏排空，可完整模拟运行时序。
 
+### 退出登录
+
+```go
+err := biliapi.Logout()   // biliapi.LoggedIn() 可查询当前登录态
+```
+
+三步动作：best-effort 调 B 站注销接口让 cookie 服务端失效（失败不阻塞）→ 清空进程内 `CookieStr`/`CookieList` → 删除 `token/bili_token.{txt,json}`。幂等，未登录时调用安全。注意：已建立的 WS 连接持有旧 cookie 快照，GUI 注销后应 `StopWsClient` 再重新扫码。
+
 ## 三档进房欢迎（PR #33）
 
 在原有 `InteractWord` 欢迎之上新增三档分流，默认关闭，旧配置行为不变：
