@@ -17,31 +17,7 @@ import (
 // registerGifts 礼物感谢
 func registerGifts(c *client.Client, svcCtx *svc.ServiceContext) {
 	c.RegisterCustomEventHandler("SEND_GIFT", func(s string) {
-		svcCtx.EventRLock()
-		defer svcCtx.EventRUnlock()
-		send := &entity.SendGiftText{}
-		if err := json.Unmarshal([]byte(s), send); err != nil {
-			logx.Errorf("SEND_GIFT 解析失败: %v", err)
-			return
-		}
-		// V1/V2 双事件 tid 去重：同一礼物若已作为 SEND_GIFT_V2 处理过，
-		// 跳过聚合与统计，避免双计数
-		if giftTidDuplicate(send.Data.Tid) {
-			logx.Debugf("礼物 tid 短窗去重: tid=%s gift=%s", send.Data.Tid, send.Data.GiftName)
-			return
-		}
-		if svcCtx.Config.ThanksGift {
-			logx.Infof("收到礼物 uname=%s gift=%s num=%d price=%d total=%d",
-				send.Data.Uname, send.Data.GiftName, send.Data.Num, send.Data.Price, send.Data.TotalCoin)
-			// 盲盒盈亏统计开启（默认）走旧聚合感谢；关闭时才用即时话术并
-			// 跳过聚合，避免默认配置的聚合播报被静默替换（评审 P1-2）
-			if send.Data.BlindGift.OriginalGiftName != "" && !svcCtx.Config.BlindBoxProfitLossStat {
-				pushBlindGiftThanks(svcCtx, send)
-				send.SkipThanks = true
-			}
-			PushToGiftChan(send)
-		}
-		danmuproc.SaveBlindBoxStat(send, svcCtx)
+		onSendGiftV1Raw(svcCtx, s)
 	})
 	c.RegisterCustomEventHandler("SEND_GIFT_V2", func(s string) {
 		onSendGiftV2Raw(svcCtx, s)
@@ -81,6 +57,36 @@ func registerGifts(c *client.Client, svcCtx *svc.ServiceContext) {
 			}
 		}
 	})
+}
+
+// onSendGiftV1Raw 处理 SEND_GIFT（V1 JSON）原始报文，
+// 抽出以便录制数据回放测试（与 V2 路径对称）
+func onSendGiftV1Raw(svcCtx *svc.ServiceContext, s string) {
+	svcCtx.EventRLock()
+	defer svcCtx.EventRUnlock()
+	send := &entity.SendGiftText{}
+	if err := json.Unmarshal([]byte(s), send); err != nil {
+		logx.Errorf("SEND_GIFT 解析失败: %v", err)
+		return
+	}
+	// V1/V2 双事件 tid 去重：同一礼物若已作为 SEND_GIFT_V2 处理过，
+	// 跳过聚合与统计，避免双计数
+	if giftTidDuplicate(send.Data.Tid) {
+		logx.Debugf("礼物 tid 短窗去重: tid=%s gift=%s", send.Data.Tid, send.Data.GiftName)
+		return
+	}
+	if svcCtx.Config.ThanksGift {
+		logx.Infof("收到礼物 uname=%s gift=%s num=%d price=%d total=%d",
+			send.Data.Uname, send.Data.GiftName, send.Data.Num, send.Data.Price, send.Data.TotalCoin)
+		// 盲盒盈亏统计开启（默认）走旧聚合感谢；关闭时才用即时话术并
+		// 跳过聚合，避免默认配置的聚合播报被静默替换（评审 P1-2）
+		if send.Data.BlindGift.OriginalGiftName != "" && !svcCtx.Config.BlindBoxProfitLossStat {
+			pushBlindGiftThanks(svcCtx, send)
+			send.SkipThanks = true
+		}
+		PushToGiftChan(send)
+	}
+	danmuproc.SaveBlindBoxStat(send, svcCtx)
 }
 
 // onSendGiftV2Raw 处理 SEND_GIFT_V2 原始报文（pb 双形态回退 + 解码 + 入队），
