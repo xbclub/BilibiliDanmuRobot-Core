@@ -40,10 +40,10 @@ func StartSendBullet(ctx context.Context, svcCtx *svc.ServiceContext) {
 			danmuLen := svcCtx.Config.DanmuLen
 			svcCtx.EventRUnlock()
 			for _, msgs := range SplitMessage(bullet.Msg, danmuLen) {
-				if err := biliapi.Send(msgs, svcCtx, bullet.Reply...); err != nil {
+				dry, err := biliapi.SendDryAware(msgs, svcCtx, bullet.Reply...)
+				if err != nil {
 					logx.Errorf("弹幕发送失败：%s msg: %s", err, msgs)
-				} else if !biliapi.DryRunEnabled() {
-					// dry-run 下 Send 内部已打 [dry-run] 日志，这里不再打「发送成功」避免误导
+				} else if !dry {
 					logx.Infof("弹幕发送成功：%s", msgs)
 				}
 				//fmt.Println(msgs)

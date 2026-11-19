@@ -77,7 +77,7 @@ func GetLoginInfo(oauthKey string) (*entity.LoginInfoData, error) {
 	}
 	for _, v := range resp.Header().Values("Set-Cookie") {
 		pair := strings.Split(v, ";")
-		kv := strings.Split(pair[0], "=")
+		kv := strings.SplitN(pair[0], "=", 2)
 		if len(kv) < 2 {
 			continue
 		}
@@ -90,20 +90,23 @@ func GetLoginInfo(oauthKey string) (*entity.LoginInfoData, error) {
 	snapshotStr := CookieStr
 	snapshotList, _ := json.Marshal(CookieList)
 	cookieMu.RUnlock()
+	// 落盘失败仅记日志（登录本身已成功），不再对 nil file 调 WriteString
 	file, err = os.OpenFile("token/bili_token.txt", os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0666)
 	if err != nil {
 		logx.Errorf("打开文件错误：%v", err)
+	} else {
+		file.WriteString(snapshotStr)
+		file.Close()
 	}
-	file.WriteString(snapshotStr)
-	file.Close()
 	//使用追加模式打开文件
 	file, err = os.OpenFile("token/bili_token.json", os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0666)
 	if err != nil {
 		logx.Errorf("打开文件错误：%v", err)
+		return data, nil
 	}
 	file.WriteString(string(snapshotList))
 	file.Close()
-	return data, err
+	return data, nil
 }
 func FileExists(path string) bool {
 	_, err := os.Stat(path) //os.Stat获取文件信息
@@ -123,17 +126,15 @@ func SetHistoryCookie() error {
 		logx.Errorf("打开文件错误：%v", err)
 		return err
 	}
-	// 解析与重建在写锁内完成，避免与发送/查询 goroutine 竞争
-	cookieMu.Lock()
-	CookieStr = string(cookie)
-	cookie, err = os.ReadFile("token/bili_token.json")
+	// 文件 IO 在锁外完成，锁内只做内存解析与重建
+	cookieJSON, err := os.ReadFile("token/bili_token.json")
 	if err != nil {
-		cookieMu.Unlock()
 		logx.Errorf("打开文件错误：%v", err)
 		return err
 	}
-	err = json.Unmarshal(cookie, &CookieList)
-	if err != nil {
+	cookieMu.Lock()
+	CookieStr = string(cookie)
+	if err = json.Unmarshal(cookieJSON, &CookieList); err != nil {
 		cookieMu.Unlock()
 		return err
 	}

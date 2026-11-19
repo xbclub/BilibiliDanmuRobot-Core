@@ -350,6 +350,10 @@ func loadConfig() (config.Config, error) {
 
 	var c config.Config
 	conf.MustLoad("etc/bilidanmaku-api.yaml", &c, conf.UseEnv())
+	// 欢迎语缺省兜底（原先写在 struct tag 的 default 里，值含空格触发 vet 告警）
+	if len(c.WelcomeDanmu) == 0 {
+		c.WelcomeDanmu = []string{"欢迎 {user} ~"}
+	}
 	logx.MustSetup(c.Log)
 	logx.DisableStat()
 	//配置数据库文件夹

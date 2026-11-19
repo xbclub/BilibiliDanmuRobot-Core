@@ -18,13 +18,20 @@ import (
 )
 
 func Send(msg string, svcCtx *svc.ServiceContext, reply ...*entity.DanmuMsgTextReplyInfo) error {
+	_, err := SendDryAware(msg, svcCtx, reply...)
+	return err
+}
+
+// SendDryAware 发送弹幕并返回该次调用是否走了 dry-run 分支，
+// 供调用方日志与实际行为保持一致（避免开关切换瞬间日志矛盾）
+func SendDryAware(msg string, svcCtx *svc.ServiceContext, reply ...*entity.DanmuMsgTextReplyInfo) (wasDryRun bool, err error) {
 	// dry-run：GUI 调试模式，不请求 B 站，只记日志并按成功返回，
 	// 让发送队列按正常节奏继续排空（EnableDryRun 开启，见 dryrun.go）
 	if dryRun.Load() {
 		logDryRunSend(msg, reply...)
-		return nil
+		return true, nil
 	}
-	var err error
+	var e error
 	var url = "https://api.live.bilibili.com/msg/send"
 	var respdata *entity.DanmuResp = new(entity.DanmuResp)
 	m := make(map[string]string)
@@ -46,7 +53,7 @@ func Send(msg string, svcCtx *svc.ServiceContext, reply ...*entity.DanmuMsgTextR
 	m["roomid"] = strconv.Itoa(svcCtx.Config.RoomId)
 	m["csrf"] = CookieValue("bili_jct")
 	m["csrf_token"] = CookieValue("bili_jct")
-	err = retry.Do(func() error {
+	e = retry.Do(func() error {
 		_, data, err := postWithFormData(http.MethodPost, url, CookieHeader(), &m)
 		if err != nil {
 			logx.Errorf("请求send失败：%v", err)
@@ -72,7 +79,7 @@ func Send(msg string, svcCtx *svc.ServiceContext, reply ...*entity.DanmuMsgTextR
 		}
 		return nil
 	}, retry.Attempts(3), retry.Delay(3500*time.Millisecond))
-	return err
+	return false, e
 }
 func postWithFormData(method, url, cookie string, postData *map[string]string) (int, []byte, error) {
 	body := new(bytes.Buffer)

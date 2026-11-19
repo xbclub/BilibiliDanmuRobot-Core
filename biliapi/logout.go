@@ -30,6 +30,7 @@ func Logout() error {
 	// 服务端注销：POST passport.bilibili.com/login/exit/v2，需要 bili_jct
 	csrf := CookieValue("bili_jct")
 	cookieHeader := CookieHeader()
+	serverCalled := false
 	if csrf != "" && cookieHeader != "" {
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
@@ -41,6 +42,7 @@ func Logout() error {
 			SetFormData(map[string]string{"bili_jct": csrf}).
 			SetResult(&resp).
 			Post("https://passport.bilibili.com/login/exit/v2")
+		serverCalled = true
 		if err != nil || resp.Code != 0 {
 			// 服务端注销失败不影响本地清理（cookie 删除后自然失效）
 			logx.Errorf("服务端注销失败（本地凭证仍会清除）: err=%v code=%d msg=%s",
@@ -48,6 +50,13 @@ func Logout() error {
 		} else {
 			logx.Info("服务端注销成功")
 		}
+	}
+
+	// 注销请求期间若发生了新的扫码登录（bili_jct 变化），放弃清空与删文件
+	// ——新会话优先，避免把刚登录的状态误清掉（TOCTOU 收口）
+	if serverCalled && CookieValue("bili_jct") != csrf {
+		logx.Info("检测到注销期间发生新的登录，跳过本地清理")
+		return nil
 	}
 
 	// 清空进程内会话状态（写锁内完成，与发送/查询 goroutine 互斥）

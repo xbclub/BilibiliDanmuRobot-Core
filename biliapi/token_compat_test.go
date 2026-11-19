@@ -13,13 +13,22 @@ func TestSetHistoryCookieOldTokenCompat(t *testing.T) {
 	oldTxt := "SESSDATA=abc123;bili_jct=xyz;DedeUserID=42;buvid3=AB==CDinfoc;"
 	oldJSON := `{"SESSDATA":"abc123","bili_jct":"xyz"}`
 
+	cookieMu.Lock()
 	CookieStr = oldTxt
 	CookieList = make(map[string]string)
 	if err := json.Unmarshal([]byte(oldJSON), &CookieList); err != nil {
+		cookieMu.Unlock()
 		t.Fatal(err)
 	}
 	mergeCookieStrIntoList(CookieStr)
 	rebuildCookieStr()
+	cookieMu.Unlock()
+	t.Cleanup(func() {
+		cookieMu.Lock()
+		CookieList = make(map[string]string)
+		CookieStr = ""
+		cookieMu.Unlock()
+	})
 
 	// json 与 txt 共有的字段 + txt 独有的字段都必须保留
 	want := map[string]string{
@@ -28,6 +37,8 @@ func TestSetHistoryCookieOldTokenCompat(t *testing.T) {
 		"DedeUserID": "42",
 		"buvid3":     "AB==CDinfoc", // 值内含 '=' 不能被截断
 	}
+	cookieMu.RLock()
+	defer cookieMu.RUnlock()
 	if len(CookieList) != len(want) {
 		t.Errorf("字段数 %d != %d: %v", len(CookieList), len(want), CookieList)
 	}
