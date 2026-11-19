@@ -24,6 +24,12 @@ func registerGifts(c *client.Client, svcCtx *svc.ServiceContext) {
 			logx.Errorf("SEND_GIFT 解析失败: %v", err)
 			return
 		}
+		// V1/V2 双事件 tid 去重：同一礼物若已作为 SEND_GIFT_V2 处理过，
+		// 跳过聚合与统计，避免双计数
+		if giftTidDuplicate(send.Data.Tid) {
+			logx.Debugf("礼物 tid 短窗去重: tid=%s gift=%s", send.Data.Tid, send.Data.GiftName)
+			return
+		}
 		if svcCtx.Config.ThanksGift {
 			logx.Infof("收到礼物 uname=%s gift=%s num=%d price=%d total=%d",
 				send.Data.Uname, send.Data.GiftName, send.Data.Num, send.Data.Price, send.Data.TotalCoin)
@@ -106,6 +112,12 @@ func onSendGiftV2Raw(svcCtx *svc.ServiceContext, s string) {
 	}
 	for _, item := range gift.Gifts {
 		send := gift.ToSendGiftText(item)
+		// V1/V2 双事件 tid 去重：同一礼物若已作为 SEND_GIFT 处理过，
+		// 跳过聚合与统计，避免双计数
+		if giftTidDuplicate(send.Data.Tid) {
+			logx.Debugf("礼物(V2) tid 短窗去重: tid=%s gift=%s", send.Data.Tid, send.Data.GiftName)
+			continue
+		}
 		if svcCtx.Config.ThanksGift {
 			logx.Infof("收到礼物(V2) uname=%s gift=%s num=%d price=%d total=%d",
 				send.Data.Uname, send.Data.GiftName, send.Data.Num, send.Data.Price, send.Data.TotalCoin)
