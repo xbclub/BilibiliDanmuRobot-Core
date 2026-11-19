@@ -100,7 +100,7 @@ func DoBlindBoxStat(msg, uid, username string, svcCtx *svc.ServiceContext, reply
 	} else {
 		ret, err = svcCtx.BlindBoxStatModel.GetTotalOnePersion(context.Background(), id, int16(now.Year()), int16(month), 0)
 	}
-	pushBlindBoxResult(fmt.Sprintf("%d年%d月", now.Year(), month), ret, err, "", reply...)
+	pushBlindBoxResult(fmt.Sprintf("%d年%d月", now.Year(), month), ret, err, blindBoxDayPrefix(uid, username, svcCtx), reply...)
 }
 
 func blindBoxDayPrefix(uid, username string, svcCtx *svc.ServiceContext) string {

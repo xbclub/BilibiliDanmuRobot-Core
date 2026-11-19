@@ -6,6 +6,7 @@ import (
 )
 
 func TestGiftTidDedup(t *testing.T) {
+	t.Cleanup(resetGiftTidSeen)
 	t0 := time.Now()
 	if giftTidDuplicateAt("tid-1", t0) {
 		t.Fatal("首次出现的 tid 不应判重")

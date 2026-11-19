@@ -22,6 +22,13 @@ func giftTidDuplicate(tid string) bool {
 	return giftTidDuplicateAt(tid, time.Now())
 }
 
+// resetGiftTidSeen 清空去重表（测试隔离用，-count>1 时避免跨轮污染）
+func resetGiftTidSeen() {
+	giftTidMu.Lock()
+	giftTidSeen = map[string]time.Time{}
+	giftTidMu.Unlock()
+}
+
 func giftTidDuplicateAt(tid string, now time.Time) bool {
 	if tid == "" {
 		return false

@@ -44,6 +44,7 @@ func drainGiftChan() []*entity.SendGiftText {
 // TestReplaySendGiftV2 用真实录制的 SEND_GIFT_V2 报文回放：
 // pb 双形态回退 → 解码 → ToSendGiftText → 礼物感谢入队
 func TestReplaySendGiftV2(t *testing.T) {
+	t.Cleanup(resetGiftTidSeen)
 	cfg := config.Config{
 		DBPath:     t.TempDir(),
 		DBName:     "replay.db",

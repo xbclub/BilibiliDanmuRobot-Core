@@ -22,9 +22,6 @@ type BulletSender struct {
 
 func PushToBulletSender(msg string, reply ...*entity.DanmuMsgTextReplyInfo) {
 	logx.Info("PushToBulletSender成功", msg)
-	if sender == nil {
-		return
-	}
 	bullet := entity.Bullet{
 		Msg:   msg,
 		Reply: reply,
