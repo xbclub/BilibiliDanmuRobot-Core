@@ -81,7 +81,7 @@ func GetLoginInfo(oauthKey string) (*entity.LoginInfoData, error) {
 		if len(kv) < 2 {
 			continue
 		}
-		if _, ok := CookieList[kv[0]]; !ok {
+		if CookieValue(kv[0]) == "" {
 			AddCookie(kv[0], kv[1])
 		}
 	}
