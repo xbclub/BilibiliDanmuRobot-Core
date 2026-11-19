@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"math"
-	"math/rand"
 	"regexp"
 	"strconv"
 
@@ -74,7 +73,7 @@ func DoBlindBoxStat(msg, uid, username string, svcCtx *svc.ServiceContext, reply
 		} else {
 			ret, err = svcCtx.BlindBoxStatModel.GetTotalOnePersion(context.Background(), id, int16(date.Year()), int16(date.Month()), int16(date.Day()))
 		}
-		pushBlindBoxResult(label, ret, err, reply...)
+		pushBlindBoxResult(label, ret, err, blindBoxDayPrefix(uid, username, svcCtx), reply...)
 		return
 	}
 
@@ -100,10 +99,17 @@ func DoBlindBoxStat(msg, uid, username string, svcCtx *svc.ServiceContext, reply
 	} else {
 		ret, err = svcCtx.BlindBoxStatModel.GetTotalOnePersion(context.Background(), id, int16(now.Year()), int16(month), 0)
 	}
-	pushBlindBoxResult(fmt.Sprintf("%d月", month), ret, err, reply...)
+	pushBlindBoxResult(fmt.Sprintf("%d年%d月", now.Year(), month), ret, err, "", reply...)
 }
 
-func pushBlindBoxResult(label string, ret *model.Result, err error, reply ...*entity.DanmuMsgTextReplyInfo) {
+func blindBoxDayPrefix(uid, username string, svcCtx *svc.ServiceContext) string {
+	if alias := svcCtx.Config.UserNicknames[uid]; alias != "" {
+		return alias + " "
+	}
+	return "@" + username + " "
+}
+
+func pushBlindBoxResult(label string, ret *model.Result, err error, prefix string, reply ...*entity.DanmuMsgTextReplyInfo) {
 	if errors.Is(err, model.ErrNotFound) {
 		ret, err = &model.Result{}, nil
 	}
@@ -115,14 +121,10 @@ func pushBlindBoxResult(label string, ret *model.Result, err error, reply ...*en
 	if ret == nil {
 		ret = &model.Result{}
 	}
-	r := float64(ret.R) / float64(1000.0)
-	// 加个随机后缀，避免短时间内重复查询同一句被 B 站判重拒绝
-	suffix := []string{"~", "呀", "哦", ""}[rand.Intn(4)]
-	if ret.R > 0 {
-		logic.PushToBulletSender(fmt.Sprintf("%s共开%d个, 赚了＋%.2f元%s", label, ret.C, r, suffix), reply...)
-	} else if ret.R == 0 {
-		logic.PushToBulletSender(fmt.Sprintf("%s共开%d个, 没亏没赚!%s", label, ret.C, suffix), reply...)
+	cost := float64(ret.Cost) / 1000.0
+	if ret.R >= 0 {
+		logic.PushToBulletSender(fmt.Sprintf("%s%s净赚%.2f元，开%d盒，花费%.2f元", prefix, label, float64(ret.R)/1000.0, ret.C, cost), reply...)
 	} else {
-		logic.PushToBulletSender(fmt.Sprintf("%s共开%d个, 亏了－%.2f元%s", label, ret.C, math.Abs(r), suffix), reply...)
+		logic.PushToBulletSender(fmt.Sprintf("%s%s净亏%.2f元，开%d盒，花费%.2f元", prefix, label, math.Abs(float64(ret.R)/1000.0), ret.C, cost), reply...)
 	}
 }

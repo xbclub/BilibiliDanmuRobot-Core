@@ -31,8 +31,9 @@ type (
 	}
 
 	Result struct {
-		C int
-		R int64
+		C    int
+		R    int64
+		Cost int64
 	}
 )
 
@@ -59,7 +60,7 @@ func (m *defaultBlindBoxStatModel) Insert(ctx context.Context, tx *gorm.DB, data
 func (m *defaultBlindBoxStatModel) GetTotalOnePersion(ctx context.Context, uid int64, year, month, day int16) (*Result, error) {
 	var resp Result
 
-	d := m.conn.WithContext(ctx).Table(m.table).Model(&BlindBoxStatBase{}).Select(`sum(cnt) as C, (sum(cnt*Price)-sum(cnt*original_gift_price)) as R`).Where("uid = ?", uid)
+	d := m.conn.WithContext(ctx).Table(m.table).Model(&BlindBoxStatBase{}).Select(`sum(cnt) as C, (sum(cnt*Price)-sum(cnt*original_gift_price)) as R, sum(cnt*original_gift_price) as Cost`).Where("uid = ?", uid)
 	if year > 0 {
 		d = d.Where("year = ?", year)
 	}
@@ -84,7 +85,7 @@ func (m *defaultBlindBoxStatModel) GetTotalOnePersion(ctx context.Context, uid i
 func (m *defaultBlindBoxStatModel) GetTotal(ctx context.Context, year, month, day int16) (*Result, error) {
 	var resp Result
 
-	d := m.conn.WithContext(ctx).Table(m.table).Model(&BlindBoxStatBase{}).Select(`sum(cnt) as C, (sum(cnt*Price)-sum(cnt*original_gift_price)) as R`)
+	d := m.conn.WithContext(ctx).Table(m.table).Model(&BlindBoxStatBase{}).Select(`sum(cnt) as C, (sum(cnt*Price)-sum(cnt*original_gift_price)) as R, sum(cnt*original_gift_price) as Cost`)
 	if year > 0 {
 		d = d.Where("year = ?", year)
 	}

@@ -92,6 +92,9 @@ func Run(ctx context.Context, svcCtx *svc.ServiceContext) {
 			thanksGiver.locked.Unlock()
 			t.Reset(w)
 		case g = <-thanksGiver.giftChan:
+			if g.SkipThanks {
+				continue
+			}
 			thanksGiver.locked.Lock()
 
 			if svcCtx.Config.ThanksGiftUseAt {

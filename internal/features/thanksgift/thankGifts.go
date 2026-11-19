@@ -2,11 +2,14 @@ package thanksgift
 
 import (
 	"encoding/json"
+	"fmt"
 	"strconv"
+	"strings"
 
 	"github.com/xbclub/BilibiliDanmuRobot-Core/blivedm-go/client"
 	"github.com/xbclub/BilibiliDanmuRobot-Core/entity"
 	"github.com/xbclub/BilibiliDanmuRobot-Core/internal/features/danmuproc"
+	"github.com/xbclub/BilibiliDanmuRobot-Core/logic"
 	"github.com/xbclub/BilibiliDanmuRobot-Core/svc"
 	"github.com/zeromicro/go-zero/core/logx"
 )
@@ -24,6 +27,10 @@ func registerGifts(c *client.Client, svcCtx *svc.ServiceContext) {
 		if svcCtx.Config.ThanksGift {
 			logx.Infof("收到礼物 uname=%s gift=%s num=%d price=%d total=%d",
 				send.Data.Uname, send.Data.GiftName, send.Data.Num, send.Data.Price, send.Data.TotalCoin)
+			if send.Data.BlindGift.OriginalGiftName != "" {
+				pushBlindGiftThanks(svcCtx, send)
+				send.SkipThanks = true
+			}
 			PushToGiftChan(send)
 		}
 		danmuproc.SaveBlindBoxStat(send, svcCtx)
@@ -100,8 +107,38 @@ func onSendGiftV2Raw(svcCtx *svc.ServiceContext, s string) {
 		if svcCtx.Config.ThanksGift {
 			logx.Infof("收到礼物(V2) uname=%s gift=%s num=%d price=%d total=%d",
 				send.Data.Uname, send.Data.GiftName, send.Data.Num, send.Data.Price, send.Data.TotalCoin)
+			if send.Data.BlindGift.OriginalGiftName != "" {
+				pushBlindGiftThanks(svcCtx, send)
+				send.SkipThanks = true
+			}
 			PushToGiftChan(send)
 		}
 		danmuproc.SaveBlindBoxStat(send, svcCtx)
 	}
+}
+
+func pushBlindGiftThanks(svcCtx *svc.ServiceContext, send *entity.SendGiftText) {
+	msg := blindBoxGiftThanks(send)
+	if svcCtx.Config.ThanksGiftUseAt {
+		logic.PushToBulletSender(msg, &entity.DanmuMsgTextReplyInfo{
+			ReplyUid: strconv.Itoa(int(send.Data.UID)),
+		})
+	} else {
+		logic.PushToBulletSender(msg)
+	}
+}
+
+func blindBoxGiftThanks(send *entity.SendGiftText) string {
+	box := send.Data.BlindGift.OriginalGiftName
+	if !strings.Contains(box, "盲盒") {
+		box += "盲盒"
+	}
+	profit := (send.Data.Price - send.Data.BlindGift.OriginalGiftPrice) * send.Data.Num
+	if profit > 0 {
+		return fmt.Sprintf("感谢%s赠送的%s，爆出%s，血赚了%d电池", send.Data.Uname, box, send.Data.GiftName, profit)
+	}
+	if profit < 0 {
+		return fmt.Sprintf("感谢%s赠送的%s，爆出%s，血亏了%d电池", send.Data.Uname, box, send.Data.GiftName, -profit)
+	}
+	return fmt.Sprintf("感谢%s赠送的%s，爆出%s，没赚没亏", send.Data.Uname, box, send.Data.GiftName)
 }
