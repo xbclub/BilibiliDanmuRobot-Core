@@ -9,7 +9,6 @@ import (
 	"github.com/zeromicro/go-zero/core/logx"
 	"math/rand"
 	"strconv"
-	"strings"
 	"time"
 )
 
@@ -103,42 +102,24 @@ func getRandomDanmuKeyByTime() (key string) {
 	}
 	return key
 }
+
+// getRandomWelcome 特效欢迎文案：选一个模板交给 renderEnterWelcome 统一渲染
+// （与主欢迎/分时段欢迎共用同一套格式规则）
 func getRandomWelcome(msg string, svcCtx *svc.ServiceContext) string {
 	s := ""
-	content := msg
-	if svcCtx.Config.InteractWordByTime &&
-		svcCtx.Config.WelcomeDanmuByTime != nil &&
-		len(svcCtx.Config.WelcomeDanmuByTime) > 0 {
-
+	if svcCtx.Config.InteractWordByTime && len(svcCtx.Config.WelcomeDanmuByTime) > 0 {
 		key := getRandomDanmuKeyByTime()
-
 		for _, danmuCfg := range svcCtx.Config.WelcomeDanmuByTime {
 			if danmuCfg.Key == key {
 				if danmuCfg.Enabled && len(danmuCfg.Danmu) > 0 {
 					s = danmuCfg.Danmu[rand.Intn(len(danmuCfg.Danmu))]
-				} else {
-					s = svcCtx.Config.WelcomeDanmu[rand.Intn(len(svcCtx.Config.WelcomeDanmu))]
 				}
 				break
 			}
 		}
-	} else {
-		s = svcCtx.Config.WelcomeDanmu[rand.Intn(len(svcCtx.Config.WelcomeDanmu))]
 	}
 	if len(s) == 0 {
 		s = svcCtx.Config.WelcomeDanmu[rand.Intn(len(svcCtx.Config.WelcomeDanmu))]
 	}
-
-	r := "{user}"
-	replace := r + "\n"
-	if svcCtx.Config.WelcomeUseAt {
-		replace = "，"
-		r = " {user}"
-	}
-	s = strings.ReplaceAll(s, r+", ", replace)
-	s = strings.ReplaceAll(s, r+",", replace)
-	s = strings.ReplaceAll(s, r+"，", replace)
-
-	s = strings.ReplaceAll(s, r, content)
-	return s
+	return renderEnterWelcome(s, msg, svcCtx)
 }

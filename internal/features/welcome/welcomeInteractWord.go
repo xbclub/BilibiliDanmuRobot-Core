@@ -316,38 +316,12 @@ func handleInterractByTime(uid int64, uname string, svcCtx *svc.ServiceContext) 
 	if svcCtx.OtherSideUid.Has(uid) {
 		return handleInterract(uid, uname, svcCtx)
 	}
-	r := "{user}"
-	rep := r + "\n"
-
-	if svcCtx.Config.InteractWordByTime &&
-		svcCtx.Config.WelcomeDanmuByTime != nil &&
-		len(svcCtx.Config.WelcomeDanmuByTime) > 0 {
-
+	if svcCtx.Config.InteractWordByTime && len(svcCtx.Config.WelcomeDanmuByTime) > 0 {
 		key := getRandomDanmuKeyByTime()
-
 		for _, danmuCfg := range svcCtx.Config.WelcomeDanmuByTime {
 			if danmuCfg.Key == key {
 				if danmuCfg.Enabled && len(danmuCfg.Danmu) > 0 {
-					szWelcomOrig := danmuCfg.Danmu[rand.Intn(len(danmuCfg.Danmu))]
-
-					if svcCtx.Config.WelcomeUseAt {
-						rep = "，"
-						r = " {user}"
-						szWelcomTmp := strings.ReplaceAll(szWelcomOrig, r+", ", rep)
-						szWelcomTmp = strings.ReplaceAll(szWelcomTmp, r+",", rep)
-						szWelcomTmp = strings.ReplaceAll(szWelcomTmp, r+"，", rep)
-						szWelcomTmp = strings.ReplaceAll(szWelcomTmp, r, "")
-						return szWelcomTmp
-					}
-					welcome := strings.ReplaceAll(szWelcomOrig, r, shortName(uname, 3, svcCtx.Config.DanmuLen))
-					rWelcome := []rune(welcome)
-					if len(rWelcome) > svcCtx.Config.DanmuLen {
-						szWelcomTmp := strings.ReplaceAll(szWelcomOrig, r+", ", rep)
-						szWelcomTmp = strings.ReplaceAll(szWelcomTmp, r+",", rep)
-						szWelcomTmp = strings.ReplaceAll(szWelcomTmp, r+"，", rep)
-						return strings.ReplaceAll(szWelcomTmp, r, uname)
-					}
-					return welcome
+					return renderEnterWelcome(danmuCfg.Danmu[rand.Intn(len(danmuCfg.Danmu))], uname, svcCtx)
 				}
 				return handleInterract(uid, uname, svcCtx)
 			}
@@ -358,10 +332,8 @@ func handleInterractByTime(uid int64, uname string, svcCtx *svc.ServiceContext) 
 }
 
 func handleInterract(uid int64, uname string, svcCtx *svc.ServiceContext) string {
-	s := []rune(uname)
-	r := "{user}"
-	rep := r + "\n"
 	if svcCtx.OtherSideUid.Has(uid) {
+		s := []rune(uname)
 		if svcCtx.Config.WelcomeUseAt {
 			return "欢迎过来串门~"
 		}
@@ -373,26 +345,42 @@ func handleInterract(uid int64, uname string, svcCtx *svc.ServiceContext) string
 		return "欢迎 " + uname + " 过来串门~"
 	}
 	szWelcomOrig := svcCtx.Config.WelcomeDanmu[rand.Intn(len(svcCtx.Config.WelcomeDanmu))]
+	return renderEnterWelcome(szWelcomOrig, uname, svcCtx)
+}
 
+// renderEnterWelcome 进房欢迎文案的统一渲染：主欢迎（WelcomeDanmu）、
+// 分时段欢迎（WelcomeDanmuByTime）与特效欢迎（ENTRY_EFFECT）共用，
+// 避免三处各写一份导致行为漂移——历史上分别出现过：未超长也被强制
+// 拆成两条（逗号丢失）、超长兜底插入两个换行、以及剩余占位符处理不一致。
+//
+//   - 带 @ 档（WelcomeUseAt=true）：@ 由 reply_mid 承担，用户名不进正文，
+//     「{user}, 」收敛为中文逗号，恒为单条
+//   - 不带 @ 档：先按单条渲染，未超 DanmuLen 直接单条（原标点完整保留）；
+//     确实超长才在用户名后换行分段，由发送层（interract_bullet）按 \n 拆条
+func renderEnterWelcome(tpl, name string, svcCtx *svc.ServiceContext) string {
 	if svcCtx.Config.WelcomeUseAt {
-		rep = "，"
-		r = " {user}"
-		szWelcomTmp := strings.ReplaceAll(szWelcomOrig, r+", ", rep)
-		szWelcomTmp = strings.ReplaceAll(szWelcomTmp, r+",", rep)
-		szWelcomTmp = strings.ReplaceAll(szWelcomTmp, r+"，", rep)
-		szWelcomTmp = strings.ReplaceAll(szWelcomTmp, r, rep)
-		return szWelcomTmp
+		return strings.NewReplacer(
+			" {user}, ", "，",
+			"{user}, ", "，",
+			" {user},", "，",
+			"{user},", "，",
+			" {user}，", "，",
+			"{user}，", "，",
+			" {user}", "",
+			"{user}", "",
+		).Replace(tpl)
 	}
-	welcome := strings.ReplaceAll(szWelcomOrig, r, shortName(uname, 3, svcCtx.Config.DanmuLen))
-	rWelcome := []rune(welcome)
-	if len(rWelcome) > svcCtx.Config.DanmuLen {
-		szWelcomTmp := strings.ReplaceAll(szWelcomOrig, r+", ", rep)
-		szWelcomTmp = strings.ReplaceAll(szWelcomTmp, r+",", rep)
-		szWelcomTmp = strings.ReplaceAll(szWelcomTmp, r+"，", rep)
-		szWelcomTmp = strings.ReplaceAll(szWelcomTmp, r, rep)
-		return strings.ReplaceAll(szWelcomTmp, r, uname)
+	if rendered := strings.ReplaceAll(tpl, "{user}", name); len([]rune(rendered)) <= svcCtx.Config.DanmuLen {
+		return rendered
 	}
-	return welcome
+	return strings.ReplaceAll(strings.NewReplacer(
+		" {user}, ", " {user}\n",
+		"{user}, ", "{user}\n",
+		" {user},", " {user}\n",
+		"{user},", "{user}\n",
+		" {user}，", " {user}\n",
+		"{user}，", "{user}\n",
+	).Replace(tpl), "{user}", name)
 }
 
 func shortName(uname string, alreadyLen, danmuLen int) string {
